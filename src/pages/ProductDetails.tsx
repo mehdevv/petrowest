@@ -13,7 +13,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useGetProduct, useGetDeliveryPrice, useCreateOrder } from "@workspace/api-client-react";
 import { ALGERIA_WILAYAS } from "@/lib/constants";
-import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart, Building2, Home } from "lucide-react";
 
 const orderSchema = z.object({
   customerName: z.string().min(2, "Le nom est requis"),
@@ -22,6 +22,8 @@ const orderSchema = z.object({
   address: z.string().min(5, "Adresse complète requise"),
   quantity: z.coerce.number().min(1),
 });
+
+type DeliveryType = "stopdesk" | "domicile";
 
 export default function ProductDetails() {
   const [, params] = useRoute("/shop/:slug");
@@ -32,6 +34,7 @@ export default function ProductDetails() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>("stopdesk");
 
   const form = useForm<z.infer<typeof orderSchema>>({
     resolver: zodResolver(orderSchema),
@@ -69,14 +72,17 @@ export default function ProductDetails() {
   if (isError || !product) return <PublicLayout><div className="pt-32 min-h-screen text-center text-xl">Produit introuvable.</div></PublicLayout>;
 
   const productTotal = product.price * (quantity || 1);
-  const deliveryCost = deliveryData?.price || 0;
+  const deliveryCost = deliveryData
+    ? (deliveryType === "domicile" ? (deliveryData.domicilePrice || 0) : (deliveryData.price || 0))
+    : 0;
   const orderTotal = productTotal + deliveryCost;
 
   const onSubmit = (data: z.infer<typeof orderSchema>) => {
     createOrder.mutate({
       data: {
         productId: product.id,
-        ...data
+        ...data,
+        deliveryType,
       }
     });
   };
@@ -86,7 +92,6 @@ export default function ProductDetails() {
   const prevImage = () => setActiveImage(i => (i - 1 + images.length) % images.length);
   const nextImage = () => setActiveImage(i => (i + 1) % images.length);
 
-  // Swipe handlers for mobile
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
@@ -104,7 +109,7 @@ export default function ProductDetails() {
 
   return (
     <PublicLayout>
-      {/* ── Lightbox ───────────────────────────────────────── */}
+      {/* ── Lightbox ── */}
       <AnimatePresence>
         {lightboxOpen && (
           <motion.div
@@ -120,24 +125,16 @@ export default function ProductDetails() {
             >
               <X className="w-6 h-6" />
             </button>
-
             {images.length > 1 && (
               <>
-                <button
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 sm:p-3 transition z-10"
-                  onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                >
+                <button className="absolute left-3 top-1/2 -translate-y-1/2 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 sm:p-3 transition z-10" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
                   <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
                 </button>
-                <button
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 sm:p-3 transition z-10"
-                  onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                >
+                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 sm:p-3 transition z-10" onClick={(e) => { e.stopPropagation(); nextImage(); }}>
                   <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
                 </button>
               </>
             )}
-
             <motion.img
               key={activeImage}
               initial={{ scale: 0.9, opacity: 0 }}
@@ -151,15 +148,10 @@ export default function ProductDetails() {
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             />
-
             {images.length > 1 && (
               <div className="absolute bottom-6 flex gap-2">
                 {images.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => { e.stopPropagation(); setActiveImage(i); }}
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${i === activeImage ? 'bg-secondary scale-125' : 'bg-white/40 hover:bg-white/60'}`}
-                  />
+                  <button key={i} onClick={(e) => { e.stopPropagation(); setActiveImage(i); }} className={`w-2.5 h-2.5 rounded-full transition-all ${i === activeImage ? 'bg-secondary scale-125' : 'bg-white/40 hover:bg-white/60'}`} />
                 ))}
               </div>
             )}
@@ -169,7 +161,7 @@ export default function ProductDetails() {
 
       <div className="bg-[#EBEBEB] min-h-screen pt-20 sm:pt-24 pb-28 sm:pb-24">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
-          {/* Breadcrumb - hidden on very small screens */}
+          {/* Breadcrumb */}
           <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-4 sm:mb-8 truncate">
             Accueil / Boutique / {product.categoryName || 'Huile'} / <span className="text-primary">{product.name}</span>
           </div>
@@ -179,7 +171,6 @@ export default function ProductDetails() {
               
               {/* ── Image Gallery ── */}
               <div className="p-4 sm:p-8 lg:p-12 lg:border-r border-border bg-gray-50 flex flex-col justify-center">
-                {/* Main image with swipe + nav */}
                 <div
                   className="relative aspect-square bg-white rounded-xl mb-3 sm:mb-4 flex items-center justify-center p-4 sm:p-8 border group overflow-hidden"
                   onTouchStart={handleTouchStart}
@@ -197,69 +188,29 @@ export default function ProductDetails() {
                       className="w-full h-full object-contain mix-blend-multiply"
                     />
                   </AnimatePresence>
-
-                  {/* Zoom button */}
-                  <button
-                    onClick={() => setLightboxOpen(true)}
-                    className="absolute top-3 right-3 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-2 sm:opacity-0 sm:group-hover:opacity-100 transition shadow-md"
-                    title="Agrandir"
-                  >
+                  <button onClick={() => setLightboxOpen(true)} className="absolute top-3 right-3 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-2 sm:opacity-0 sm:group-hover:opacity-100 transition shadow-md" title="Agrandir">
                     <ZoomIn className="w-4 h-4" />
                   </button>
-
-                  {/* Desktop nav arrows */}
                   {images.length > 1 && (
                     <>
-                      <button
-                        onClick={prevImage}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-1.5 sm:p-2 shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition"
-                      >
-                        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                      <button
-                        onClick={nextImage}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-1.5 sm:p-2 shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition"
-                      >
-                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
+                      <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-1.5 sm:p-2 shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition"><ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" /></button>
+                      <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-1.5 sm:p-2 shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition"><ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" /></button>
                     </>
                   )}
-
-                  {/* Image counter */}
                   {images.length > 1 && (
-                    <span className="absolute bottom-3 right-3 bg-black/40 text-white text-xs font-medium px-2 py-1 rounded-full">
-                      {activeImage + 1} / {images.length}
-                    </span>
+                    <span className="absolute bottom-3 right-3 bg-black/40 text-white text-xs font-medium px-2 py-1 rounded-full">{activeImage + 1} / {images.length}</span>
                   )}
                 </div>
-
-                {/* Dot indicators on mobile, thumbnails on desktop */}
                 {images.length > 1 && (
                   <>
-                    {/* Mobile: dots */}
                     <div className="flex sm:hidden justify-center gap-2 pb-1">
                       {images.map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setActiveImage(i)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            activeImage === i ? 'bg-primary scale-125 w-5' : 'bg-gray-300'
-                          }`}
-                        />
+                        <button key={i} onClick={() => setActiveImage(i)} className={`w-2 h-2 rounded-full transition-all ${activeImage === i ? 'bg-primary scale-125 w-5' : 'bg-gray-300'}`} />
                       ))}
                     </div>
-                    {/* Desktop: thumbnails */}
                     <div className="hidden sm:flex gap-3 overflow-x-auto pb-1">
                       {images.map((img, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setActiveImage(i)}
-                          className={`flex-shrink-0 w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-lg border-2 p-1.5 transition-all ${
-                            activeImage === i
-                              ? 'border-primary shadow-md scale-105'
-                              : 'border-transparent hover:border-border opacity-70 hover:opacity-100'
-                          }`}
-                        >
+                        <button key={i} onClick={() => setActiveImage(i)} className={`flex-shrink-0 w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-lg border-2 p-1.5 transition-all ${activeImage === i ? 'border-primary shadow-md scale-105' : 'border-transparent hover:border-border opacity-70 hover:opacity-100'}`}>
                           <img src={img} className="w-full h-full object-contain" alt={`Vue ${i + 1}`} />
                         </button>
                       ))}
@@ -271,61 +222,26 @@ export default function ProductDetails() {
               {/* ── Product Info ── */}
               <div className="p-5 sm:p-8 lg:p-12 flex flex-col">
                 <div className="flex justify-between items-start mb-2 sm:mb-4">
-                  <Badge className="bg-secondary text-primary font-bold text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 border-none hover:bg-secondary">
-                    {product.oilType}
-                  </Badge>
+                  <Badge className="bg-secondary text-primary font-bold text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 border-none hover:bg-secondary">{product.oilType}</Badge>
                   {!product.inStock && <Badge variant="destructive" className="text-xs">Rupture de Stock</Badge>}
                 </div>
-                
-                <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl text-primary mb-1 sm:mb-2 leading-tight">
-                  {product.name}
-                </h1>
-                <p className="text-base sm:text-xl text-muted-foreground font-bold uppercase tracking-wider mb-4 sm:mb-6">
-                  {product.brandName}
-                </p>
-                
-                {/* Price - prominent on mobile */}
+                <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl text-primary mb-1 sm:mb-2 leading-tight">{product.name}</h1>
+                <p className="text-base sm:text-xl text-muted-foreground font-bold uppercase tracking-wider mb-4 sm:mb-6">{product.brandName}</p>
                 <div className="font-display text-3xl sm:text-5xl font-bold text-primary mb-5 sm:mb-8 border-b pb-5 sm:pb-8">
                   {product.price.toLocaleString()} <span className="text-lg sm:text-2xl text-muted-foreground">DA</span>
                 </div>
-
-                <p className="text-sm sm:text-lg leading-relaxed text-gray-700 mb-5 sm:mb-8">
-                  {product.description}
-                </p>
-
-                {/* Specs grid - compact on mobile */}
+                <p className="text-sm sm:text-lg leading-relaxed text-gray-700 mb-5 sm:mb-8">{product.description}</p>
                 <div className="grid grid-cols-3 gap-2 sm:gap-y-4 sm:gap-x-8 mb-5 sm:mb-8 bg-gray-50 p-3 sm:p-6 rounded-xl border">
-                  <div>
-                    <span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Volume</span>
-                    <strong className="text-primary text-xs sm:text-lg">{product.volume}</strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Viscosité</span>
-                    <strong className="text-primary text-xs sm:text-lg">{product.viscosityGrade || 'N/A'}</strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Norme API</span>
-                    <strong className="text-primary text-xs sm:text-lg">{product.apiStandard || 'N/A'}</strong>
-                  </div>
+                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Volume</span><strong className="text-primary text-xs sm:text-lg">{product.volume}</strong></div>
+                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Viscosité</span><strong className="text-primary text-xs sm:text-lg">{product.viscosityGrade || 'N/A'}</strong></div>
+                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Norme API</span><strong className="text-primary text-xs sm:text-lg">{product.apiStandard || 'N/A'}</strong></div>
                 </div>
-
-                {/* Trust badges */}
                 <div className="space-y-2 sm:space-y-4 pt-3 sm:pt-4 border-t">
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary">
-                    <ShieldCheck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> Garantie 100% Authentique
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary">
-                    <Truck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> Livraison dans les 58 Wilayas
-                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary"><ShieldCheck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> Garantie 100% Authentique</div>
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary"><Truck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> Livraison dans les 58 Wilayas</div>
                 </div>
-
-                {/* Mobile CTA in product info section */}
                 {product.inStock && (
-                  <Button
-                    onClick={scrollToOrder}
-                    size="lg"
-                    className="w-full mt-6 h-14 text-lg font-display tracking-wider bg-secondary text-primary hover:bg-secondary/90 sm:hidden"
-                  >
+                  <Button onClick={scrollToOrder} size="lg" className="w-full mt-6 h-14 text-lg font-display tracking-wider bg-secondary text-primary hover:bg-secondary/90 sm:hidden">
                     <ShoppingCart className="w-5 h-5 mr-2" />
                     Commander — {product.price.toLocaleString()} DA
                   </Button>
@@ -353,11 +269,11 @@ export default function ProductDetails() {
                     </div>
                     <h3 className="font-display text-2xl sm:text-3xl text-green-700 mb-2">Commande Reçue !</h3>
                     <p className="text-sm sm:text-lg text-green-800 mb-6 sm:mb-8">Merci, {form.getValues('customerName')}. Nous vous appellerons bientôt pour confirmer votre livraison.</p>
-                    
                     <div className="bg-white p-4 sm:p-6 rounded-lg border text-left max-w-sm mx-auto text-sm sm:text-base">
                       <h4 className="font-bold border-b pb-2 mb-3 sm:mb-4 text-primary">Résumé de la Commande</h4>
                       <div className="flex justify-between mb-2"><span>Produit</span><span className="font-bold">{product.name}</span></div>
                       <div className="flex justify-between mb-2"><span>Quantité</span><span className="font-bold">{form.getValues('quantity')}</span></div>
+                      <div className="flex justify-between mb-2"><span>Livraison</span><span className="font-bold">{deliveryType === "domicile" ? "À Domicile" : "Stop Desk"}</span></div>
                       <div className="flex justify-between font-bold text-base sm:text-lg pt-2 border-t mt-3 sm:mt-4 text-primary"><span>Total à Payer</span><span>{orderTotal.toLocaleString()} DA</span></div>
                     </div>
                   </div>
@@ -406,10 +322,72 @@ export default function ProductDetails() {
                         )}/>
                       </div>
 
+                      {/* ── Delivery Type Toggle ── */}
+                      <div>
+                        <label className="text-sm font-medium mb-3 block">Type de Livraison</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setDeliveryType("stopdesk")}
+                            className={`relative flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl border-2 transition-all ${
+                              deliveryType === "stopdesk"
+                                ? "border-primary bg-primary/5 shadow-md"
+                                : "border-gray-200 hover:border-gray-300 bg-white"
+                            }`}
+                          >
+                            {deliveryType === "stopdesk" && (
+                              <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                            )}
+                            <Building2 className={`w-7 h-7 sm:w-8 sm:h-8 ${deliveryType === "stopdesk" ? "text-primary" : "text-gray-400"}`} />
+                            <span className={`font-bold text-sm sm:text-base ${deliveryType === "stopdesk" ? "text-primary" : "text-gray-600"}`}>Stop Desk</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">Retrait au bureau de livraison</span>
+                            {selectedWilayaCode && deliveryData && (
+                              <span className={`font-display font-bold text-base sm:text-lg ${deliveryType === "stopdesk" ? "text-secondary" : "text-gray-500"}`}>
+                                {deliveryData.price.toLocaleString()} DA
+                              </span>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setDeliveryType("domicile")}
+                            className={`relative flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl border-2 transition-all ${
+                              deliveryType === "domicile"
+                                ? "border-primary bg-primary/5 shadow-md"
+                                : "border-gray-200 hover:border-gray-300 bg-white"
+                            }`}
+                          >
+                            {deliveryType === "domicile" && (
+                              <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                            )}
+                            <Home className={`w-7 h-7 sm:w-8 sm:h-8 ${deliveryType === "domicile" ? "text-primary" : "text-gray-400"}`} />
+                            <span className={`font-bold text-sm sm:text-base ${deliveryType === "domicile" ? "text-primary" : "text-gray-600"}`}>À Domicile</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">Livraison à votre porte</span>
+                            {selectedWilayaCode && deliveryData && (
+                              <span className={`font-display font-bold text-base sm:text-lg ${deliveryType === "domicile" ? "text-secondary" : "text-gray-500"}`}>
+                                {deliveryData.domicilePrice.toLocaleString()} DA
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
                       <FormField control={form.control} name="address" render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm">Adresse de Livraison Complète</FormLabel>
-                          <FormControl><Textarea className="text-base sm:text-lg min-h-[80px] sm:min-h-[100px]" placeholder="Rue, Quartier, Ville..." {...field} /></FormControl>
+                          <FormLabel className="text-sm">
+                            {deliveryType === "domicile" ? "Adresse de Livraison Complète" : "Point de Relais / Adresse"}
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              className="text-base sm:text-lg min-h-[80px] sm:min-h-[100px]"
+                              placeholder={deliveryType === "domicile" ? "Rue, Quartier, Ville..." : "Bureau de livraison le plus proche ou votre adresse..."}
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}/>
@@ -423,7 +401,8 @@ export default function ProductDetails() {
                             </div>
                             {selectedWilayaCode && (
                               <div className="flex justify-between sm:justify-start sm:gap-8 text-white/70 text-sm sm:text-base">
-                                <span>Livraison :</span> <span className="text-secondary font-bold">{deliveryCost === 0 ? "Gratuit" : `${deliveryCost.toLocaleString()} DA`}</span>
+                                <span>Livraison ({deliveryType === "domicile" ? "Domicile" : "Stop Desk"}) :</span>
+                                <span className="text-secondary font-bold">{deliveryCost === 0 ? "Gratuit" : `${deliveryCost.toLocaleString()} DA`}</span>
                               </div>
                             )}
                           </div>
@@ -450,18 +429,13 @@ export default function ProductDetails() {
               <p className="text-sm sm:text-lg text-muted-foreground">Ce produit est actuellement indisponible. Veuillez réessayer plus tard.</p>
             </div>
           )}
-
         </div>
       </div>
 
       {/* ── Sticky Mobile Bottom CTA ── */}
       {product.inStock && !orderSuccess && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-primary shadow-[0_-4px_20px_rgba(0,0,0,0.15)] p-3 sm:hidden">
-          <Button
-            onClick={scrollToOrder}
-            size="lg"
-            className="w-full h-12 text-base font-display tracking-wider bg-secondary text-primary hover:bg-secondary/90"
-          >
+          <Button onClick={scrollToOrder} size="lg" className="w-full h-12 text-base font-display tracking-wider bg-secondary text-primary hover:bg-secondary/90">
             <ShoppingCart className="w-5 h-5 mr-2" />
             Commander — {product.price.toLocaleString()} DA
           </Button>
@@ -470,3 +444,4 @@ export default function ProductDetails() {
     </PublicLayout>
   );
 }
+

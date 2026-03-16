@@ -74,7 +74,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
--- 3. CREATE ORDER (computes prices automatically)
+-- 3. CREATE ORDER (computes prices automatically, supports delivery type)
 -- ============================================================
 CREATE OR REPLACE FUNCTION create_order(
   p_product_id INT,
@@ -82,7 +82,8 @@ CREATE OR REPLACE FUNCTION create_order(
   p_phone TEXT,
   p_wilaya_code TEXT,
   p_address TEXT,
-  p_quantity INT
+  p_quantity INT,
+  p_delivery_type TEXT DEFAULT 'stopdesk'
 )
 RETURNS JSON AS $$
 DECLARE
@@ -101,17 +102,24 @@ BEGIN
     RAISE EXCEPTION 'Product not found';
   END IF;
 
-  -- Get delivery price
-  SELECT dp.wilaya_name, dp.price INTO v_delivery
+  -- Get delivery prices (both stopdesk and domicile)
+  SELECT dp.wilaya_name, dp.price, dp.domicile_price INTO v_delivery
   FROM delivery_prices dp WHERE dp.wilaya_code = p_wilaya_code;
 
   v_wilaya_name := COALESCE(v_delivery.wilaya_name, 'Unknown');
-  v_delivery_price := COALESCE(v_delivery.price, 500);
+
+  -- Pick the right price based on delivery type
+  IF p_delivery_type = 'domicile' THEN
+    v_delivery_price := COALESCE(v_delivery.domicile_price, 800);
+  ELSE
+    v_delivery_price := COALESCE(v_delivery.price, 500);
+  END IF;
+
   v_total := (v_product.price * p_quantity) + v_delivery_price;
 
   -- Insert order
-  INSERT INTO orders (product_id, customer_name, phone, wilaya_code, wilaya_name, address, quantity, delivery_price, total_price, status)
-  VALUES (p_product_id, p_customer_name, p_phone, p_wilaya_code, v_wilaya_name, p_address, p_quantity, v_delivery_price, v_total, 'Pending')
+  INSERT INTO orders (product_id, customer_name, phone, wilaya_code, wilaya_name, address, quantity, delivery_type, delivery_price, total_price, status)
+  VALUES (p_product_id, p_customer_name, p_phone, p_wilaya_code, v_wilaya_name, p_address, p_quantity, p_delivery_type, v_delivery_price, v_total, 'Pending')
   RETURNING * INTO v_order;
 
   RETURN json_build_object(
@@ -126,6 +134,7 @@ BEGIN
     'wilayaName', v_order.wilaya_name,
     'address', v_order.address,
     'quantity', v_order.quantity,
+    'deliveryType', v_order.delivery_type,
     'deliveryPrice', v_order.delivery_price,
     'totalPrice', v_order.total_price,
     'status', v_order.status,

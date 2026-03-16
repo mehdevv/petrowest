@@ -78,6 +78,7 @@ function transformOrder(row: any) {
     wilayaName: row.wilaya_name,
     address: row.address,
     quantity: row.quantity,
+    deliveryType: row.delivery_type || "stopdesk",
     deliveryPrice: Number(row.delivery_price),
     totalPrice: Number(row.total_price),
     status: row.status,
@@ -351,6 +352,7 @@ export async function handleApiRoute(
       p_wilaya_code: body.wilayaCode,
       p_address: body.address,
       p_quantity: body.quantity,
+      p_delivery_type: body.deliveryType || "stopdesk",
     });
     if (error) throw new RouteError(500, error.message);
     const result = typeof data === "string" ? JSON.parse(data) : data;
@@ -907,7 +909,7 @@ export async function handleApiRoute(
   if (method === "GET" && path === "/api/delivery-prices") {
     const { data, error } = await supabase
       .from("delivery_prices")
-      .select("id, wilaya_code, wilaya_name, price")
+      .select("id, wilaya_code, wilaya_name, price, domicile_price")
       .order("wilaya_code");
     if (error) throw new RouteError(500, error.message);
 
@@ -916,6 +918,7 @@ export async function handleApiRoute(
       wilayaCode: d.wilaya_code,
       wilayaName: d.wilaya_name,
       price: Number(d.price),
+      domicilePrice: Number(d.domicile_price),
     }));
     return { data: result, status: 200 };
   }
@@ -925,19 +928,20 @@ export async function handleApiRoute(
     const rows = (body.prices || []).map((p: any) => ({
       wilaya_code: p.wilayaCode,
       price: p.price,
+      domicile_price: p.domicilePrice,
     }));
 
     for (const row of rows) {
       await supabase
         .from("delivery_prices")
-        .update({ price: row.price })
+        .update({ price: row.price, domicile_price: row.domicile_price })
         .eq("wilaya_code", row.wilaya_code);
     }
 
     // Return updated list
     const { data, error } = await supabase
       .from("delivery_prices")
-      .select("id, wilaya_code, wilaya_name, price")
+      .select("id, wilaya_code, wilaya_name, price, domicile_price")
       .order("wilaya_code");
     if (error) throw new RouteError(500, error.message);
 
@@ -946,6 +950,7 @@ export async function handleApiRoute(
       wilayaCode: d.wilaya_code,
       wilayaName: d.wilaya_name,
       price: Number(d.price),
+      domicilePrice: Number(d.domicile_price),
     }));
     return { data: result, status: 200 };
   }
@@ -953,7 +958,7 @@ export async function handleApiRoute(
   if (method === "GET" && (m = match(path, "/api/delivery-prices/:wilayaCode"))) {
     const { data, error } = await supabase
       .from("delivery_prices")
-      .select("id, wilaya_code, wilaya_name, price")
+      .select("id, wilaya_code, wilaya_name, price, domicile_price")
       .eq("wilaya_code", m.wilayaCode)
       .maybeSingle();
     if (error) throw new RouteError(500, error.message);
@@ -964,6 +969,7 @@ export async function handleApiRoute(
         wilayaCode: data.wilaya_code,
         wilayaName: data.wilaya_name,
         price: Number(data.price),
+        domicilePrice: Number(data.domicile_price),
       },
       status: 200,
     };

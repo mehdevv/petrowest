@@ -10,16 +10,22 @@ import { Save, RotateCcw } from "lucide-react";
 
 export default function DeliveryPrices() {
   const { data: pricesData, isLoading } = useListDeliveryPrices();
-  const [localPrices, setLocalPrices] = useState<Record<string, number>>({});
+  const [localDesk, setLocalDesk] = useState<Record<string, number>>({});
+  const [localDomicile, setLocalDomicile] = useState<Record<string, number>>({});
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   useEffect(() => {
     if (pricesData) {
-      const map: Record<string, number> = {};
-      pricesData.forEach(p => { map[p.wilayaCode] = p.price; });
-      setLocalPrices(map);
+      const deskMap: Record<string, number> = {};
+      const domMap: Record<string, number> = {};
+      pricesData.forEach(p => {
+        deskMap[p.wilayaCode] = p.price;
+        domMap[p.wilayaCode] = p.domicilePrice;
+      });
+      setLocalDesk(deskMap);
+      setLocalDomicile(domMap);
     }
   }, [pricesData]);
 
@@ -33,18 +39,21 @@ export default function DeliveryPrices() {
   });
 
   const handleSaveAll = () => {
-    const pricesArray = Object.entries(localPrices).map(([wilayaCode, price]) => ({
+    const pricesArray = Object.keys(localDesk).map(wilayaCode => ({
       wilayaCode,
-      price: Number(price)
+      price: Number(localDesk[wilayaCode]),
+      domicilePrice: Number(localDomicile[wilayaCode]),
     }));
     saveMut.mutate({ data: { prices: pricesArray } });
   };
 
   const handleReset = () => {
-    if(confirm("Réinitialiser toutes les wilayas à 500 DA ?")) {
-      const resetMap: Record<string, number> = {};
-      Object.keys(localPrices).forEach(k => resetMap[k] = 500);
-      setLocalPrices(resetMap);
+    if(confirm("Réinitialiser tous les prix ? Stop Desk = 500 DA, À Domicile = 800 DA")) {
+      const deskMap: Record<string, number> = {};
+      const domMap: Record<string, number> = {};
+      Object.keys(localDesk).forEach(k => { deskMap[k] = 500; domMap[k] = 800; });
+      setLocalDesk(deskMap);
+      setLocalDomicile(domMap);
     }
   };
 
@@ -53,7 +62,7 @@ export default function DeliveryPrices() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="font-display text-4xl text-primary mb-1">Prix de Livraison</h1>
-          <p className="text-muted-foreground">Définir les prix de livraison contre remboursement pour les 58 wilayas.</p>
+          <p className="text-muted-foreground">Définir les prix <strong>Stop Desk</strong> et <strong>À Domicile</strong> pour les 58 wilayas.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleReset} className="hover-elevate">
@@ -65,17 +74,28 @@ export default function DeliveryPrices() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border overflow-hidden max-w-4xl shadow-sm">
+      <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
         <Table>
           <TableHeader className="bg-[#001D3D] hover:bg-[#001D3D]">
             <TableRow>
-              <TableHead className="text-white font-bold tracking-wider">Code</TableHead>
+              <TableHead className="text-white font-bold tracking-wider w-16">Code</TableHead>
               <TableHead className="text-white font-bold tracking-wider">Nom de la Wilaya</TableHead>
-              <TableHead className="text-right text-white font-bold tracking-wider">Prix (DA)</TableHead>
+              <TableHead className="text-right text-white font-bold tracking-wider">
+                <div className="flex flex-col items-end">
+                  <span>Stop Desk</span>
+                  <span className="text-xs text-white/60 font-normal">Bureau de livraison</span>
+                </div>
+              </TableHead>
+              <TableHead className="text-right text-white font-bold tracking-wider">
+                <div className="flex flex-col items-end">
+                  <span>À Domicile</span>
+                  <span className="text-xs text-white/60 font-normal">Livraison à la porte</span>
+                </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={3} className="text-center py-8">Chargement des wilayas...</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={4} className="text-center py-8">Chargement des wilayas...</TableCell></TableRow>}
             {pricesData?.map((item) => (
               <TableRow key={item.wilayaCode} className="hover:bg-gray-50">
                 <TableCell className="font-bold text-muted-foreground">{item.wilayaCode}</TableCell>
@@ -84,9 +104,20 @@ export default function DeliveryPrices() {
                   <div className="flex justify-end items-center gap-2">
                     <Input 
                       type="number"
-                      value={localPrices[item.wilayaCode] ?? item.price}
-                      onChange={(e) => setLocalPrices({...localPrices, [item.wilayaCode]: Number(e.target.value)})}
-                      className="w-32 text-right font-bold h-10 border-primary/20 focus-visible:ring-secondary"
+                      value={localDesk[item.wilayaCode] ?? item.price}
+                      onChange={(e) => setLocalDesk({...localDesk, [item.wilayaCode]: Number(e.target.value)})}
+                      className="w-28 text-right font-bold h-10 border-primary/20 focus-visible:ring-secondary"
+                    />
+                    <span className="text-sm font-medium text-muted-foreground w-6">DA</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end items-center gap-2">
+                    <Input 
+                      type="number"
+                      value={localDomicile[item.wilayaCode] ?? item.domicilePrice}
+                      onChange={(e) => setLocalDomicile({...localDomicile, [item.wilayaCode]: Number(e.target.value)})}
+                      className="w-28 text-right font-bold h-10 border-orange-300/50 focus-visible:ring-orange-400"
                     />
                     <span className="text-sm font-medium text-muted-foreground w-6">DA</span>
                   </div>

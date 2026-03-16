@@ -108,6 +108,7 @@ export interface Order {
   wilayaName: string;
   address: string;
   quantity: number;
+  deliveryType: string;
   deliveryPrice: number;
   totalPrice: number;
   status: string;
@@ -130,6 +131,7 @@ export interface CreateOrderBody {
   wilayaCode: string;
   address: string;
   quantity: number;
+  deliveryType?: string;
 }
 
 export interface UpdateOrderBody {
@@ -277,11 +279,13 @@ export interface DeliveryPrice {
   wilayaCode: string;
   wilayaName: string;
   price: number;
+  domicilePrice: number;
 }
 
 export interface DeliveryPriceItem {
   wilayaCode: string;
   price: number;
+  domicilePrice: number;
 }
 
 export interface SaveDeliveryPricesBody {
