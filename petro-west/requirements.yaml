@@ -1,0 +1,21 @@
+packages:
+  "framer-motion": "Animations for the vehicle filter slide-in and page transitions"
+  "@hookform/resolvers": "Zod validation for react-hook-form"
+  "recharts": "Dashboard analytics charts"
+  "date-fns": "Human-readable date formatting for orders"
+  "lucide-react": "Standard icons for UI"
+  "react-hook-form": "Form state management"
+  "zod": "Schema validation"
+
+images:
+  - path: "artifacts/petro-west/public/images/hero-bg.png"
+    description: "High quality cinematic dark photograph of golden motor oil being poured into a car engine. Industrial, automotive, dramatic lighting, bold contrast, sharp focus, dark background space for text."
+    aspect_ratio: "16:9"
+  - path: "artifacts/petro-west/public/images/pattern-bg.png"
+    description: "Abstract subtle geometric pattern in deep navy blue #001D3D. Industrial, automotive mesh pattern, very dark and subtle texture."
+    aspect_ratio: "16:9"
+
+notes:
+  - Using generated Orval hooks from @workspace/api-client-react
+  - wouter for routing
+  - Tailwind CSS v4 styling
