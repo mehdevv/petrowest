@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight } from "lucide-react";
+import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2 } from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ui-custom/ProductCard";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -16,16 +19,27 @@ import {
   useListVehicleCategories, 
   useListVehicleBrands, 
   useListVehicleModels, 
-  useListVehicleVersions, 
+  useListVehicleVersions,
+  useListVehicleYears,
   useGetVehicleRecommendation,
-  useListProducts
+  useListProducts,
+  useCreateB2BMessage,
 } from "@workspace/api-client-react";
+
+const CAR_LOGOS_BASE = "https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos";
+
+function brandLogoUrl(name: string, customUrl?: string | null) {
+  if (customUrl) return customUrl;
+  const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  return `${CAR_LOGOS_BASE}/thumb/${slug}.png`;
+}
 
 function VehicleFilter() {
   const [categoryId, setCategoryId] = useState<string>("");
   const [brandId, setBrandId] = useState<string>("");
   const [modelId, setModelId] = useState<string>("");
   const [versionId, setVersionId] = useState<string>("");
+  const [yearId, setYearId] = useState<string>("");
   const [searched, setSearched] = useState(false);
 
   const { data: categories } = useListVehicleCategories();
@@ -41,28 +55,36 @@ function VehicleFilter() {
     { vehicleModelId: Number(modelId) }, 
     { query: { enabled: !!modelId } }
   );
-  const { data: recommendedProduct, isLoading: recommendLoading } = useGetVehicleRecommendation(
-    { vehicleVersionId: Number(versionId) }, 
-    { query: { enabled: searched && !!versionId, retry: false } }
+  const { data: years, isLoading: yearsLoading } = useListVehicleYears(
+    { vehicleVersionId: Number(versionId) },
+    { query: { enabled: !!versionId } }
+  );
+  const { data: recommendedProducts, isLoading: recommendLoading } = useGetVehicleRecommendation(
+    { vehicleYearId: Number(yearId) }, 
+    { query: { enabled: searched && !!yearId, retry: false } }
   );
 
   const resetFromCategory = () => {
-    setBrandId(""); setModelId(""); setVersionId(""); setSearched(false);
+    setBrandId(""); setModelId(""); setVersionId(""); setYearId(""); setSearched(false);
   };
   const resetFromBrand = () => {
-    setModelId(""); setVersionId(""); setSearched(false);
+    setModelId(""); setVersionId(""); setYearId(""); setSearched(false);
   };
   const resetFromModel = () => {
-    setVersionId(""); setSearched(false);
+    setVersionId(""); setYearId(""); setSearched(false);
+  };
+  const resetFromVersion = () => {
+    setYearId(""); setSearched(false);
   };
 
   const handleFindOil = () => {
-    if (versionId) {
+    if (yearId) {
       setSearched(true);
     }
   };
 
-  // Fallback category labels when API is not available
+  const selectedBrand = brands?.find(b => b.id.toString() === brandId);
+
   const defaultCategories = [
     { id: "car", name: "Voiture" },
     { id: "moto", name: "Moto" },
@@ -73,9 +95,9 @@ function VehicleFilter() {
   return (
     <div className="w-full max-w-6xl mx-auto mt-10">
       <div className="bg-[#001D3D]/90 backdrop-blur-xl border-2 border-secondary rounded-xl shadow-2xl overflow-hidden">
-        {/* Filter Row */}
         <div className="p-4 md:p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          {/* Row 1: Category + Brand with logo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end mb-4">
             {/* 1. Vehicle Type */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
@@ -100,7 +122,7 @@ function VehicleFilter() {
               </div>
             </div>
 
-            {/* 2. Brand */}
+            {/* 2. Brand with logo */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
                 2. Marque
@@ -113,12 +135,27 @@ function VehicleFilter() {
                 <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
                   <SelectValue placeholder={brandsLoading ? "Chargement..." : "Sélectionner la Marque"} />
                 </SelectTrigger>
-                <SelectContent>
-                  {brands?.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                  <SelectContent>
+                    {brands?.map(b => (
+                      <SelectItem key={b.id} value={b.id.toString()}>
+                        <span className="flex items-center gap-2">
+                          <img
+                            src={brandLogoUrl(b.name, b.logoUrl)}
+                            alt=""
+                            className="w-5 h-5 object-contain inline-block"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          />
+                          {b.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
             </div>
+          </div>
 
+          {/* Row 2: Model + Engine + Year */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             {/* 3. Model */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
@@ -146,7 +183,7 @@ function VehicleFilter() {
               <Select 
                 disabled={!modelId} 
                 value={versionId} 
-                onValueChange={(val) => { setVersionId(val); setSearched(false); }}
+                onValueChange={(val) => { setVersionId(val); resetFromVersion(); }}
               >
                 <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
                   <SelectValue placeholder={versionsLoading ? "Chargement..." : "Moteur"} />
@@ -156,22 +193,41 @@ function VehicleFilter() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* 5. Year */}
+            <div>
+              <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
+                5. Année
+              </label>
+              <Select 
+                disabled={!versionId} 
+                value={yearId} 
+                onValueChange={(val) => { setYearId(val); setSearched(false); }}
+              >
+                <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
+                  <SelectValue placeholder={yearsLoading ? "Chargement..." : "Année"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {years?.map(y => <SelectItem key={y.id} value={y.id.toString()}>{y.year}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
         {/* FIND MY OIL Button */}
         <button
           onClick={handleFindOil}
-          disabled={!versionId}
+          disabled={!yearId}
           className="w-full bg-secondary hover:bg-yellow-400 disabled:bg-secondary/50 disabled:cursor-not-allowed text-primary font-display text-2xl md:text-3xl tracking-wider py-4 flex items-center justify-center gap-3 transition-colors duration-200"
         >
           TROUVER MON HUILE <ArrowRight className="w-6 h-6" strokeWidth={3} />
         </button>
       </div>
 
-      {/* Result Area — slides down below the filter box */}
+      {/* Result Area */}
       <AnimatePresence>
-        {searched && versionId && (
+        {searched && yearId && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -183,31 +239,41 @@ function VehicleFilter() {
               <div className="h-28 flex items-center justify-center bg-[#001D3D]/80 backdrop-blur-xl rounded-xl border-2 border-secondary/40">
                 <span className="text-secondary animate-pulse font-display text-xl tracking-wider">Analyse des spécifications moteur...</span>
               </div>
-            ) : recommendedProduct ? (
-              <div className="bg-white rounded-xl p-5 flex flex-col sm:flex-row items-center gap-6 shadow-xl border-2 border-secondary">
-                <div className="w-28 h-28 bg-gray-100 rounded-lg p-2 flex-shrink-0">
-                  <img 
-                    src={recommendedProduct.images?.[0] || "https://images.unsplash.com/photo-1623815148007-850d995cb4d5?w=200&h=200&fit=crop"} 
-                    alt={recommendedProduct.name}
-                    className="w-full h-full object-contain mix-blend-multiply"
-                  />
+            ) : recommendedProducts && recommendedProducts.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  <span className="text-white font-bold text-sm uppercase tracking-widest">
+                    {recommendedProducts.length} huile{recommendedProducts.length > 1 ? "s" : ""} recommandée{recommendedProducts.length > 1 ? "s" : ""}
+                  </span>
                 </div>
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <span className="text-green-600 font-bold text-xs uppercase tracking-widest">Correspondance Parfaite</span>
+                {recommendedProducts.map((product) => (
+                  <div key={product.id} className="bg-white rounded-xl p-5 flex flex-col sm:flex-row items-center gap-6 shadow-xl border-2 border-secondary">
+                    <div className="w-28 h-28 bg-gray-100 rounded-lg p-2 flex-shrink-0">
+                      <img 
+                        src={product.images?.[0] || "https://images.unsplash.com/photo-1623815148007-850d995cb4d5?w=200&h=200&fit=crop"} 
+                        alt={product.name}
+                        className="w-full h-full object-contain mix-blend-multiply"
+                      />
+                    </div>
+                    <div className="flex-1 text-center sm:text-left">
+                      <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        <span className="text-green-600 font-bold text-xs uppercase tracking-widest">Correspondance Parfaite</span>
+                      </div>
+                      <h3 className="font-display text-3xl text-primary leading-none mb-2">{product.name}</h3>
+                      <p className="text-muted-foreground text-sm mb-3">{product.description?.substring(0, 100)}...</p>
+                      <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
+                        <span className="font-display text-3xl text-primary font-bold">
+                          {product.price?.toLocaleString()} <span className="text-lg text-muted-foreground">DA</span>
+                        </span>
+                        <Button asChild size="lg" variant="secondary" className="font-display text-xl tracking-wider w-full sm:w-auto h-12">
+                          <Link href={`/shop/${product.slug}`}>Acheter</Link>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="font-display text-3xl text-primary leading-none mb-2">{recommendedProduct.name}</h3>
-                  <p className="text-muted-foreground text-sm mb-3">{recommendedProduct.description?.substring(0, 100)}...</p>
-                  <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
-                    <span className="font-display text-3xl text-primary font-bold">
-                      {recommendedProduct.price?.toLocaleString()} <span className="text-lg text-muted-foreground">DA</span>
-                    </span>
-                    <Button asChild size="lg" variant="secondary" className="font-display text-xl tracking-wider w-full sm:w-auto h-12">
-                      <Link href={`/shop/${recommendedProduct.slug}`}>Acheter</Link>
-                    </Button>
-                  </div>
-                </div>
+                ))}
               </div>
             ) : (
               <div className="h-24 flex items-center justify-center bg-[#001D3D]/80 backdrop-blur-xl rounded-xl border border-white/20 text-white/80 font-medium">
@@ -218,6 +284,139 @@ function VehicleFilter() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function B2BSection() {
+  const { toast } = useToast();
+  const [form, setForm] = useState({ company: "", phone: "", email: "", message: "" });
+  const createMessage = useCreateB2BMessage({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Message envoyé", description: "Nous reviendrons vers vous rapidement." });
+        setForm({ company: "", phone: "", email: "", message: "" });
+      },
+      onError: () => {
+        toast({ title: "Erreur", description: "Impossible d'envoyer votre message. Réessayez.", variant: "destructive" });
+      },
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.company || !form.phone || !form.email || !form.message) return;
+    createMessage.mutate({ data: form });
+  };
+
+  return (
+    <section className="py-24 bg-[#EBEBEB]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center mb-16">
+          <div className="flex items-center gap-3 mb-4">
+            <Building2 className="w-10 h-10 text-secondary" />
+            <h2 className="font-display text-5xl text-primary">Contactez-Nous</h2>
+          </div>
+          <div className="w-24 h-1.5 bg-secondary rounded-full mb-4"></div>
+          <p className="text-muted-foreground text-lg text-center max-w-2xl">
+            Vous êtes un professionnel ? Contactez-nous pour des offres spéciales en gros et consultez notre fiche technique.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-stretch">
+          {/* Left — Contact Form */}
+          <div className="bg-white rounded-2xl shadow-xl border border-border p-8 lg:p-10 flex flex-col">
+            <h3 className="font-display text-3xl text-primary mb-6">Contactez-nous</h3>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-1">
+              <div>
+                <label className="text-sm font-semibold text-primary mb-1.5 block">Nom de l'entreprise</label>
+                <Input
+                  placeholder="Ex: SARL MonEntreprise"
+                  value={form.company}
+                  onChange={(e) => setForm(prev => ({ ...prev, company: e.target.value }))}
+                  required
+                  className="h-12"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="text-sm font-semibold text-primary mb-1.5 block">Numéro de téléphone</label>
+                  <Input
+                    type="tel"
+                    placeholder="+213 XXX XXX XXX"
+                    value={form.phone}
+                    onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
+                    required
+                    className="h-12"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-primary mb-1.5 block">Adresse e-mail</label>
+                  <Input
+                    type="email"
+                    placeholder="contact@entreprise.dz"
+                    value={form.email}
+                    onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
+                    required
+                    className="h-12"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col">
+                <label className="text-sm font-semibold text-primary mb-1.5 block">Votre message</label>
+                <Textarea
+                  placeholder="Décrivez vos besoins en lubrifiants, quantités souhaitées..."
+                  value={form.message}
+                  onChange={(e) => setForm(prev => ({ ...prev, message: e.target.value }))}
+                  required
+                  className="flex-1 min-h-[120px] resize-none"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                disabled={createMessage.isPending}
+                className="font-display text-xl tracking-wider h-14 w-full"
+              >
+                {createMessage.isPending ? (
+                  <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Envoi en cours...</>
+                ) : (
+                  <><Send className="w-5 h-5 mr-2" /> Envoyer le Message</>
+                )}
+              </Button>
+            </form>
+          </div>
+
+          {/* Right — PDF Technical Sheet Viewer */}
+          <div className="bg-white rounded-2xl shadow-xl border border-border p-6 lg:p-8 flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
+                <FileText className="w-6 h-6 text-secondary" />
+              </div>
+              <div>
+                <h3 className="font-display text-2xl text-primary leading-tight">Fiche Technique</h3>
+                <p className="text-sm text-muted-foreground">PETROWEST — Documentation produits</p>
+              </div>
+            </div>
+            <div className="flex-1 rounded-xl overflow-hidden border border-border bg-gray-100 min-h-[400px]">
+              <iframe
+                src={`${import.meta.env.BASE_URL}PETROWEST.pdf`}
+                className="w-full h-full min-h-[500px]"
+                title="Fiche Technique PETROWEST"
+              />
+            </div>
+            <a
+              href={`${import.meta.env.BASE_URL}PETROWEST.pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center justify-center gap-2 text-primary font-bold hover:text-secondary transition-colors text-sm"
+            >
+              <FileText className="w-4 h-4" />
+              Ouvrir la fiche technique en plein écran
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -237,7 +436,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#001D3D] via-[#001D3D]/80 to-black/50 mix-blend-multiply" />
         </div>
         
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 origin-top scale-[0.9]">
           <div className="text-center max-w-3xl mx-auto mb-8">
             <h1 className="font-display text-5xl md:text-7xl lg:text-8xl text-white mb-6 drop-shadow-lg leading-[0.9]">
               Trouvez l'<span className="text-secondary">Huile</span> Parfaite<br/>Pour Votre Véhicule
@@ -325,6 +524,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* B2B Section */}
+      <B2BSection />
 
       {/* Our Reference — seamless infinite scrolling logos */}
       <section className="py-16 bg-primary border-y-4 border-secondary overflow-hidden">

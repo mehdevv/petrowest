@@ -163,3 +163,6 @@ CREATE INDEX IF NOT EXISTS idx_vehicle_versions_product ON vehicle_versions(reco
 -- ============================================================
 
 
+
+
+

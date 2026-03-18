@@ -14,7 +14,17 @@ import { useListBrands, useListCategories, useListOilTypes, useCreateProduct, us
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToImgBB } from "@/lib/imgbb";
-import { ArrowLeft, Upload, Camera, X, Loader2, ImageIcon, Plus, GripVertical } from "lucide-react";
+import { uploadProductPdf } from "@/lib/upload-pdf";
+import { ArrowLeft, Upload, Camera, X, Loader2, ImageIcon, Plus, GripVertical, FileText, ShieldCheck } from "lucide-react";
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "product";
+}
 
 const productSchema = z.object({
   name: z.string().min(2, "Le nom est requis"),
@@ -52,6 +62,14 @@ export default function ProductForm() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [pendingSlot, setPendingSlot] = useState<"file" | "camera" | null>(null);
 
+  // PDF sheet state
+  const [securitySheetUrl, setSecuritySheetUrl] = useState<string | null>(null);
+  const [technicalSheetUrl, setTechnicalSheetUrl] = useState<string | null>(null);
+  const [uploadingSecurity, setUploadingSecurity] = useState(false);
+  const [uploadingTechnical, setUploadingTechnical] = useState(false);
+  const securityInputRef = useRef<HTMLInputElement>(null);
+  const technicalInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -74,6 +92,8 @@ export default function ProductForm() {
     if (isEdit && existingProduct) {
       const existingImages = existingProduct.images || [];
       setImages(existingImages);
+      setSecuritySheetUrl(existingProduct.securitySheetUrl ?? null);
+      setTechnicalSheetUrl(existingProduct.technicalSheetUrl ?? null);
       form.reset({
         name: existingProduct.name,
         brandId: existingProduct.brandId,
@@ -148,6 +168,32 @@ export default function ProductForm() {
     });
   };
 
+  const handlePdfUpload = async (file: File, type: "security" | "technical") => {
+    if (!file || file.type !== "application/pdf") {
+      toast({ title: "Seuls les fichiers PDF sont acceptés.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Le fichier ne doit pas dépasser 10 Mo.", variant: "destructive" });
+      return;
+    }
+
+    const slug = form.getValues("name") ? slugify(form.getValues("name")) : "product";
+    const setter = type === "security" ? setSecuritySheetUrl : setTechnicalSheetUrl;
+    const setLoading = type === "security" ? setUploadingSecurity : setUploadingTechnical;
+
+    setLoading(true);
+    try {
+      const url = await uploadProductPdf(file, slug, type);
+      setter(url);
+      toast({ title: type === "security" ? "Fiche de sécurité ajoutée." : "Fiche technique ajoutée." });
+    } catch (error: any) {
+      toast({ title: error.message || "Échec du téléchargement.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const createMutation = useCreateProduct({
     mutation: {
       onSuccess: () => {
@@ -169,7 +215,12 @@ export default function ProductForm() {
   });
 
   const onSubmit = (data: z.infer<typeof productSchema>) => {
-    const payload = { ...data, images };
+    const payload = {
+      ...data,
+      images,
+      securitySheetUrl: securitySheetUrl || null,
+      technicalSheetUrl: technicalSheetUrl || null,
+    };
     if (isEdit) {
       updateMutation.mutate({ id: productId, data: payload });
     } else {
@@ -178,7 +229,7 @@ export default function ProductForm() {
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
-  const isUploading = uploadingIndex !== null;
+  const isUploading = uploadingIndex !== null || uploadingSecurity || uploadingTechnical;
 
   if (isEdit && productLoading) return <AdminLayout>Chargement...</AdminLayout>;
 
@@ -397,6 +448,126 @@ export default function ProductForm() {
               <p className="text-xs text-muted-foreground">
                 Maximum 8 images. Utilisez ← → pour réordonner. La première image est l'image principale affichée dans la boutique.
                 Formats acceptés : JPG, PNG, GIF, WebP. Taille max : 32 Mo.
+              </p>
+            </div>
+
+            {/* ── PDF Sheets Upload ─────────────────────── */}
+            <div className="space-y-4">
+              <h3 className="font-display text-xl border-b pb-2 text-primary">
+                Fiches Produit (PDF)
+                <span className="text-sm font-sans font-normal text-muted-foreground ml-3">
+                  Fiche de sécurité et fiche technique — Max 10 Mo chacune
+                </span>
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Security Sheet */}
+                <div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-primary font-semibold">
+                    <ShieldCheck className="w-5 h-5 text-red-500" />
+                    Fiche de Sécurité
+                  </div>
+                  {securitySheetUrl ? (
+                    <div className="flex items-center gap-3 bg-white rounded-lg border p-3">
+                      <FileText className="w-8 h-8 text-red-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-primary truncate">Fiche de sécurité.pdf</p>
+                        <a href={securitySheetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Voir le fichier</a>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSecuritySheetUrl(null)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                        title="Supprimer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={uploadingSecurity}
+                      onClick={() => securityInputRef.current?.click()}
+                      className="flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary/50 hover:bg-white transition cursor-pointer disabled:opacity-50"
+                    >
+                      {uploadingSecurity ? (
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      ) : (
+                        <Upload className="w-8 h-8 text-gray-400" />
+                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {uploadingSecurity ? "Téléchargement..." : "Cliquez pour ajouter le PDF"}
+                      </span>
+                    </button>
+                  )}
+                  <input
+                    ref={securityInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handlePdfUpload(file, "security");
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+
+                {/* Technical Sheet */}
+                <div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-primary font-semibold">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    Fiche Technique
+                  </div>
+                  {technicalSheetUrl ? (
+                    <div className="flex items-center gap-3 bg-white rounded-lg border p-3">
+                      <FileText className="w-8 h-8 text-blue-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-primary truncate">Fiche technique.pdf</p>
+                        <a href={technicalSheetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Voir le fichier</a>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTechnicalSheetUrl(null)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                        title="Supprimer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={uploadingTechnical}
+                      onClick={() => technicalInputRef.current?.click()}
+                      className="flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary/50 hover:bg-white transition cursor-pointer disabled:opacity-50"
+                    >
+                      {uploadingTechnical ? (
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      ) : (
+                        <Upload className="w-8 h-8 text-gray-400" />
+                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {uploadingTechnical ? "Téléchargement..." : "Cliquez pour ajouter le PDF"}
+                      </span>
+                    </button>
+                  )}
+                  <input
+                    ref={technicalInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handlePdfUpload(file, "technical");
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Format accepté : PDF uniquement. Taille max : 10 Mo par fichier. Ces fiches seront consultables directement sur la page du produit.
               </p>
             </div>
 

@@ -13,7 +13,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useGetProduct, useGetDeliveryPrice, useCreateOrder } from "@workspace/api-client-react";
 import { ALGERIA_WILAYAS } from "@/lib/constants";
-import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart, Building2, Home } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart, Building2, Home, FileText } from "lucide-react";
 
 const orderSchema = z.object({
   customerName: z.string().min(2, "Le nom est requis"),
@@ -35,6 +35,8 @@ export default function ProductDetails() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("stopdesk");
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null);
+  const [pdfViewerTitle, setPdfViewerTitle] = useState("");
 
   const form = useForm<z.infer<typeof orderSchema>>({
     resolver: zodResolver(orderSchema),
@@ -159,6 +161,45 @@ export default function ProductDetails() {
         )}
       </AnimatePresence>
 
+      {/* ── PDF Viewer Modal ── */}
+      <AnimatePresence>
+        {pdfViewerUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-3 sm:p-6"
+            onClick={() => setPdfViewerUrl(null)}
+          >
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden"
+              style={{ height: "min(90vh, 900px)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  <h3 className="font-display text-lg sm:text-xl text-primary">{pdfViewerTitle}</h3>
+                </div>
+                <button
+                  className="text-gray-500 hover:text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-full p-1.5 transition"
+                  onClick={() => setPdfViewerUrl(null)}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 bg-gray-100">
+                <iframe
+                  src={pdfViewerUrl}
+                  className="w-full h-full border-0"
+                  title={pdfViewerTitle}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="bg-[#EBEBEB] min-h-screen pt-20 sm:pt-24 pb-28 sm:pb-24">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
           {/* Breadcrumb */}
@@ -231,6 +272,36 @@ export default function ProductDetails() {
                   {product.price.toLocaleString()} <span className="text-lg sm:text-2xl text-muted-foreground">DA</span>
                 </div>
                 <p className="text-sm sm:text-lg leading-relaxed text-gray-700 mb-5 sm:mb-8">{product.description}</p>
+                {(product.securitySheetUrl || product.technicalSheetUrl) && (
+                  <div className="flex flex-wrap gap-3 mb-5 sm:mb-8">
+                    {product.securitySheetUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPdfViewerUrl(product.securitySheetUrl!);
+                          setPdfViewerTitle("Fiche de Sécurité");
+                        }}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border-2 border-red-200 rounded-xl text-red-700 font-semibold text-sm hover:bg-red-100 hover:border-red-300 transition-all hover:shadow-md"
+                      >
+                        <ShieldCheck className="w-5 h-5" />
+                        Fiche de Sécurité
+                      </button>
+                    )}
+                    {product.technicalSheetUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPdfViewerUrl(product.technicalSheetUrl!);
+                          setPdfViewerTitle("Fiche Technique");
+                        }}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border-2 border-blue-200 rounded-xl text-blue-700 font-semibold text-sm hover:bg-blue-100 hover:border-blue-300 transition-all hover:shadow-md"
+                      >
+                        <FileText className="w-5 h-5" />
+                        Fiche Technique
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2 sm:gap-y-4 sm:gap-x-8 mb-5 sm:mb-8 bg-gray-50 p-3 sm:p-6 rounded-xl border">
                   <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Volume</span><strong className="text-primary text-xs sm:text-lg">{product.volume}</strong></div>
                   <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Viscosité</span><strong className="text-primary text-xs sm:text-lg">{product.viscosityGrade || 'N/A'}</strong></div>
@@ -444,4 +515,7 @@ export default function ProductDetails() {
     </PublicLayout>
   );
 }
+
+
+
 

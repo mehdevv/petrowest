@@ -9,7 +9,8 @@ import {
   CarFront, 
   LogOut,
   Menu,
-  BookOpen
+  BookOpen,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdminGetMe, useAdminLogout } from "@workspace/api-client-react";
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { label: "Catalogue", href: "/admin/catalogue", icon: BookOpen },
   { label: "Prix de Livraison", href: "/admin/delivery", icon: Truck },
   { label: "Filtre Véhicule", href: "/admin/vehicle-filter", icon: CarFront },
+  { label: "Messages B2B", href: "/admin/b2b-messages", icon: Building2 },
 ];
 
 export function AdminLayout({ children }: { children: ReactNode }) {

@@ -60,6 +60,8 @@ function transformProduct(row: any) {
     compatibleVehicleTypes: row.compatible_vehicle_types ?? [],
     inStock: row.in_stock,
     featured: row.featured,
+    securitySheetUrl: row.security_sheet_url ?? null,
+    technicalSheetUrl: row.technical_sheet_url ?? null,
     createdAt: row.created_at,
   };
 }
@@ -228,6 +230,8 @@ export async function handleApiRoute(
       compatible_vehicle_types: body.compatibleVehicleTypes ?? [],
       in_stock: body.inStock ?? true,
       featured: body.featured ?? false,
+      security_sheet_url: body.securitySheetUrl ?? null,
+      technical_sheet_url: body.technicalSheetUrl ?? null,
     };
     const { data, error } = await supabase
       .from("products")
@@ -290,6 +294,8 @@ export async function handleApiRoute(
     if (body.compatibleVehicleTypes !== undefined) updates.compatible_vehicle_types = body.compatibleVehicleTypes;
     if (body.inStock !== undefined) updates.in_stock = body.inStock;
     if (body.featured !== undefined) updates.featured = body.featured;
+    if (body.securitySheetUrl !== undefined) updates.security_sheet_url = body.securitySheetUrl;
+    if (body.technicalSheetUrl !== undefined) updates.technical_sheet_url = body.technicalSheetUrl;
     updates.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase
@@ -623,7 +629,7 @@ export async function handleApiRoute(
   if (method === "GET" && path === "/api/vehicle/brands") {
     let query = supabase
       .from("vehicle_brands")
-      .select("id, name, vehicle_category_id, vehicle_categories!vehicle_category_id(name)")
+      .select("id, name, logo_url, vehicle_category_id, vehicle_categories!vehicle_category_id(name)")
       .order("name");
 
     if (q.vehicleCategoryId) {
@@ -645,6 +651,7 @@ export async function handleApiRoute(
     const result = (data || []).map((b: any) => ({
       id: b.id,
       name: b.name,
+      logoUrl: b.logo_url ?? null,
       vehicleCategoryId: b.vehicle_category_id,
       vehicleCategoryName: b.vehicle_categories?.name ?? null,
       modelCount: countMap[b.id] || 0,
@@ -655,7 +662,11 @@ export async function handleApiRoute(
   if (method === "POST" && path === "/api/vehicle/brands") {
     const { data, error } = await supabase
       .from("vehicle_brands")
-      .insert({ name: body.name, vehicle_category_id: body.vehicleCategoryId })
+      .insert({
+        name: body.name,
+        vehicle_category_id: body.vehicleCategoryId,
+        logo_url: body.logoUrl ?? null,
+      })
       .select()
       .single();
     if (error) throw new RouteError(500, error.message);
@@ -663,6 +674,7 @@ export async function handleApiRoute(
       data: {
         id: data.id,
         name: data.name,
+        logoUrl: data.logo_url ?? null,
         vehicleCategoryId: data.vehicle_category_id,
         vehicleCategoryName: null,
         modelCount: 0,
@@ -675,6 +687,7 @@ export async function handleApiRoute(
     const updates: any = {};
     if (body.name !== undefined) updates.name = body.name;
     if (body.vehicleCategoryId !== undefined) updates.vehicle_category_id = body.vehicleCategoryId;
+    if (body.logoUrl !== undefined) updates.logo_url = body.logoUrl;
 
     const { data, error } = await supabase
       .from("vehicle_brands")
@@ -687,6 +700,7 @@ export async function handleApiRoute(
       data: {
         id: data.id,
         name: data.name,
+        logoUrl: data.logo_url ?? null,
         vehicleCategoryId: data.vehicle_category_id,
         vehicleCategoryName: null,
         modelCount: 0,
@@ -874,32 +888,151 @@ export async function handleApiRoute(
   }
 
   // ═══════════════════════════════════════════════════════
-  //  VEHICLE RECOMMEND
+  //  VEHICLE YEARS
+  // ═══════════════════════════════════════════════════════
+
+  if (method === "GET" && path === "/api/vehicle/years") {
+    let query = supabase
+      .from("vehicle_years")
+      .select("id, year, vehicle_version_id")
+      .order("year", { ascending: false });
+
+    if (q.vehicleVersionId) {
+      query = query.eq("vehicle_version_id", Number(q.vehicleVersionId));
+    }
+
+    const { data, error } = await query;
+    if (error) throw new RouteError(500, error.message);
+
+    const result = (data || []).map((y: any) => ({
+      id: y.id,
+      year: y.year,
+      vehicleVersionId: y.vehicle_version_id,
+    }));
+    return { data: result, status: 200 };
+  }
+
+  if (method === "POST" && path === "/api/vehicle/years") {
+    const { data, error } = await supabase
+      .from("vehicle_years")
+      .insert({
+        year: body.year,
+        vehicle_version_id: body.vehicleVersionId,
+      })
+      .select()
+      .single();
+    if (error) throw new RouteError(500, error.message);
+    return {
+      data: {
+        id: data.id,
+        year: data.year,
+        vehicleVersionId: data.vehicle_version_id,
+      },
+      status: 201,
+    };
+  }
+
+  if (method === "DELETE" && (m = match(path, "/api/vehicle/years/:id"))) {
+    const { error } = await supabase.from("vehicle_years").delete().eq("id", Number(m.id));
+    if (error) throw new RouteError(500, error.message);
+    return { data: null, status: 204 };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  VEHICLE YEAR PRODUCTS (multi-product recommendations)
+  // ═══════════════════════════════════════════════════════
+
+  // Get products for a given year
+  if (method === "GET" && (m = match(path, "/api/vehicle/years/:id/products"))) {
+    const { data, error } = await supabase
+      .from("vehicle_year_products")
+      .select("id, product_id, products!product_id(name, slug, price, images, brands!brand_id(name))")
+      .eq("vehicle_year_id", Number(m.id));
+    if (error) throw new RouteError(500, error.message);
+
+    const result = (data || []).map((r: any) => ({
+      id: r.id,
+      productId: r.product_id,
+      productName: r.products?.name ?? null,
+      productSlug: r.products?.slug ?? null,
+      productPrice: r.products ? Number(r.products.price) : null,
+      productImage: r.products?.images?.[0] ?? null,
+      productBrandName: r.products?.brands?.name ?? null,
+    }));
+    return { data: result, status: 200 };
+  }
+
+  // Set products for a year (replace all)
+  if (method === "PUT" && (m = match(path, "/api/vehicle/years/:id/products"))) {
+    const yearId = Number(m.id);
+    // Remove existing
+    await supabase.from("vehicle_year_products").delete().eq("vehicle_year_id", yearId);
+    // Insert new
+    const productIds: number[] = body.productIds || [];
+    if (productIds.length > 0) {
+      const rows = productIds.map((pid: number) => ({ vehicle_year_id: yearId, product_id: pid }));
+      const { error } = await supabase.from("vehicle_year_products").insert(rows);
+      if (error) throw new RouteError(500, error.message);
+    }
+    // Return the new list
+    const { data } = await supabase
+      .from("vehicle_year_products")
+      .select("id, product_id")
+      .eq("vehicle_year_id", yearId);
+    return { data: (data || []).map((r: any) => ({ id: r.id, productId: r.product_id })), status: 200 };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  VEHICLE RECOMMEND (updated: year-based, multiple)
   // ═══════════════════════════════════════════════════════
 
   if (method === "GET" && path === "/api/vehicle/recommend") {
+    const yearId = Number(q.vehicleYearId);
+    // Legacy: support old vehicleVersionId param
     const versionId = Number(q.vehicleVersionId);
-    if (!versionId) throw new RouteError(400, "vehicleVersionId required");
 
-    // Get the version with its recommended product
-    const { data: version, error: vErr } = await supabase
-      .from("vehicle_versions")
-      .select("recommended_product_id")
-      .eq("id", versionId)
-      .maybeSingle();
-    if (vErr) throw new RouteError(500, vErr.message);
-    if (!version?.recommended_product_id)
-      throw new RouteError(404, "No recommendation for this version");
+    if (yearId) {
+      // New path: get products for a specific year
+      const { data: links, error } = await supabase
+        .from("vehicle_year_products")
+        .select("product_id")
+        .eq("vehicle_year_id", yearId);
+      if (error) throw new RouteError(500, error.message);
+      if (!links || links.length === 0) throw new RouteError(404, "No recommendations for this year");
 
-    const { data: product, error: pErr } = await supabase
-      .from("products")
-      .select("*, brands!brand_id(name), categories!category_id(name)")
-      .eq("id", version.recommended_product_id)
-      .maybeSingle();
-    if (pErr) throw new RouteError(500, pErr.message);
-    if (!product) throw new RouteError(404, "Recommended product not found");
+      const ids = links.map((l: any) => l.product_id);
+      const { data: products, error: pErr } = await supabase
+        .from("products")
+        .select("*, brands!brand_id(name), categories!category_id(name)")
+        .in("id", ids);
+      if (pErr) throw new RouteError(500, pErr.message);
 
-    return { data: transformProduct(product), status: 200 };
+      return { data: (products || []).map(transformProduct), status: 200 };
+    }
+
+    if (versionId) {
+      // Legacy single-product fallback via recommended_product_id
+      const { data: version, error: vErr } = await supabase
+        .from("vehicle_versions")
+        .select("recommended_product_id")
+        .eq("id", versionId)
+        .maybeSingle();
+      if (vErr) throw new RouteError(500, vErr.message);
+      if (!version?.recommended_product_id)
+        throw new RouteError(404, "No recommendation for this version");
+
+      const { data: product, error: pErr } = await supabase
+        .from("products")
+        .select("*, brands!brand_id(name), categories!category_id(name)")
+        .eq("id", version.recommended_product_id)
+        .maybeSingle();
+      if (pErr) throw new RouteError(500, pErr.message);
+      if (!product) throw new RouteError(404, "Recommended product not found");
+
+      return { data: [transformProduct(product)], status: 200 };
+    }
+
+    throw new RouteError(400, "vehicleYearId or vehicleVersionId required");
   }
 
   // ═══════════════════════════════════════════════════════
@@ -973,6 +1106,70 @@ export async function handleApiRoute(
       },
       status: 200,
     };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  B2B MESSAGES
+  // ═══════════════════════════════════════════════════════
+
+  // Create (public form) — uses SECURITY DEFINER RPC to bypass grants/RLS
+  if (method === "POST" && path === "/api/b2b-messages") {
+    const { data, error } = await supabase.rpc("create_b2b_message", {
+      p_company: body.company,
+      p_phone: body.phone,
+      p_email: body.email,
+      p_message: body.message,
+    });
+    if (error) throw new RouteError(500, error.message);
+    const result = typeof data === "string" ? JSON.parse(data) : data;
+    return { data: result, status: 201 };
+  }
+
+  // List (admin)
+  if (method === "GET" && path === "/api/b2b-messages") {
+    const page = parseInt(q.page || "1");
+    const limit = parseInt(q.limit || "20");
+
+    const { data, error } = await supabase.rpc("list_b2b_messages_admin", {
+      p_is_read: q.isRead !== undefined ? q.isRead === "true" : null,
+      p_search: q.search || null,
+      p_page: page,
+      p_limit: limit,
+    });
+    if (error) throw new RouteError(500, error.message);
+    const result = typeof data === "string" ? JSON.parse(data) : data;
+    return { data: result, status: 200 };
+  }
+
+  // Unread count (admin)
+  if (method === "GET" && path === "/api/b2b-messages/unread-count") {
+    const { data, error } = await supabase.rpc("get_b2b_unread_count");
+    if (error) throw new RouteError(500, error.message);
+    const result = typeof data === "string" ? JSON.parse(data) : data;
+    return { data: result, status: 200 };
+  }
+
+  // Update (admin – mark read/unread)
+  if (method === "PATCH" && (m = match(path, "/api/b2b-messages/:id"))) {
+    const { data, error } = await supabase.rpc("update_b2b_message_admin", {
+      p_id: Number(m.id),
+      p_is_read: body.isRead ?? null,
+    });
+    if (error) {
+      if (error.message?.includes("not found")) throw new RouteError(404, "B2B message not found");
+      throw new RouteError(500, error.message);
+    }
+    const result = typeof data === "string" ? JSON.parse(data) : data;
+    return { data: result, status: 200 };
+  }
+
+  // Delete (admin)
+  if (method === "DELETE" && (m = match(path, "/api/b2b-messages/:id"))) {
+    const { error } = await supabase.rpc("delete_b2b_message_admin", {
+      p_id: Number(m.id),
+    });
+    if (error) throw new RouteError(500, error.message);
+    return { data: null, status: 204 };
   }
 
   // ═══════════════════════════════════════════════════════

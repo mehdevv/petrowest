@@ -41,6 +41,10 @@ export interface Product {
   compatibleVehicleTypes: string[];
   inStock: boolean;
   featured: boolean;
+  /** @nullable */
+  securitySheetUrl?: string | null;
+  /** @nullable */
+  technicalSheetUrl?: string | null;
   createdAt: string;
 }
 
@@ -68,6 +72,10 @@ export interface CreateProductBody {
   compatibleVehicleTypes?: string[];
   inStock?: boolean;
   featured?: boolean;
+  /** @nullable */
+  securitySheetUrl?: string | null;
+  /** @nullable */
+  technicalSheetUrl?: string | null;
 }
 
 export interface UpdateProductBody {
@@ -87,6 +95,10 @@ export interface UpdateProductBody {
   compatibleVehicleTypes?: string[];
   inStock?: boolean;
   featured?: boolean;
+  /** @nullable */
+  securitySheetUrl?: string | null;
+  /** @nullable */
+  technicalSheetUrl?: string | null;
 }
 
 export interface ToggleStockBody {
@@ -213,6 +225,8 @@ export interface UpdateVehicleCategoryBody {
 export interface VehicleBrand {
   id: number;
   name: string;
+  /** @nullable */
+  logoUrl?: string | null;
   vehicleCategoryId: number;
   /** @nullable */
   vehicleCategoryName?: string | null;
@@ -222,11 +236,15 @@ export interface VehicleBrand {
 export interface CreateVehicleBrandBody {
   name: string;
   vehicleCategoryId: number;
+  /** @nullable */
+  logoUrl?: string | null;
 }
 
 export interface UpdateVehicleBrandBody {
   name?: string;
   vehicleCategoryId?: number;
+  /** @nullable */
+  logoUrl?: string | null;
 }
 
 export interface VehicleModel {
@@ -343,5 +361,83 @@ export type ListVehicleVersionsParams = {
 };
 
 export type GetVehicleRecommendationParams = {
+  vehicleYearId?: number;
+  vehicleVersionId?: number;
+};
+
+// ── Vehicle Years ────────────────────────────────────
+
+export interface VehicleYear {
+  id: number;
+  year: number;
   vehicleVersionId: number;
+}
+
+export interface CreateVehicleYearBody {
+  year: number;
+  vehicleVersionId: number;
+}
+
+export type ListVehicleYearsParams = {
+  vehicleVersionId?: number;
+};
+
+export interface VehicleYearProduct {
+  id: number;
+  productId: number;
+  /** @nullable */
+  productName?: string | null;
+  /** @nullable */
+  productSlug?: string | null;
+  /** @nullable */
+  productPrice?: number | null;
+  /** @nullable */
+  productImage?: string | null;
+  /** @nullable */
+  productBrandName?: string | null;
+}
+
+export interface SetYearProductsBody {
+  productIds: number[];
+}
+
+// ── B2B Messages ─────────────────────────────────────
+
+export interface B2BMessage {
+  id: number;
+  company: string;
+  phone: string;
+  email: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface B2BMessageListResponse {
+  messages: B2BMessage[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CreateB2BMessageBody {
+  company: string;
+  phone: string;
+  email: string;
+  message: string;
+}
+
+export interface UpdateB2BMessageBody {
+  isRead?: boolean;
+}
+
+export interface B2BUnreadCount {
+  count: number;
+}
+
+export type ListB2BMessagesParams = {
+  isRead?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
 };

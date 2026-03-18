@@ -62,6 +62,17 @@ import type {
   VehicleCategory,
   VehicleModel,
   VehicleVersion,
+  B2BMessage,
+  B2BMessageListResponse,
+  CreateB2BMessageBody,
+  UpdateB2BMessageBody,
+  B2BUnreadCount,
+  ListB2BMessagesParams,
+  VehicleYear,
+  CreateVehicleYearBody,
+  ListVehicleYearsParams,
+  VehicleYearProduct,
+  SetYearProductsBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -3539,8 +3550,8 @@ export const getGetVehicleRecommendationUrl = (
 export const getVehicleRecommendation = async (
   params: GetVehicleRecommendationParams,
   options?: RequestInit,
-): Promise<Product> => {
-  return customFetch<Product>(getGetVehicleRecommendationUrl(params), {
+): Promise<Product[]> => {
+  return customFetch<Product[]>(getGetVehicleRecommendationUrl(params), {
     ...options,
     method: "GET",
   });
@@ -4103,4 +4114,578 @@ export function useAdminGetMe<
   };
 
   return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ═══════════════════════════════════════════════════════
+//  B2B MESSAGES
+// ═══════════════════════════════════════════════════════
+
+/**
+ * @summary Create a B2B contact message (public)
+ */
+export const getCreateB2BMessageUrl = () => {
+  return `/api/b2b-messages`;
+};
+
+export const createB2BMessage = async (
+  body: CreateB2BMessageBody,
+  options?: RequestInit,
+): Promise<B2BMessage> => {
+  return customFetch<B2BMessage>(getCreateB2BMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const getCreateB2BMessageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createB2BMessage>>,
+    TError,
+    { data: BodyType<CreateB2BMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createB2BMessage>>,
+    { data: BodyType<CreateB2BMessageBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return createB2BMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions } as UseMutationOptions<
+    Awaited<ReturnType<typeof createB2BMessage>>,
+    TError,
+    { data: BodyType<CreateB2BMessageBody> },
+    TContext
+  >;
+};
+
+export function useCreateB2BMessage<
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createB2BMessage>>,
+    TError,
+    { data: BodyType<CreateB2BMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createB2BMessage>>,
+  TError,
+  { data: BodyType<CreateB2BMessageBody> },
+  TContext
+> {
+  const mutationOptions = getCreateB2BMessageMutationOptions(options);
+  return useMutation(mutationOptions);
+}
+
+/**
+ * @summary List B2B messages (admin)
+ */
+export const getListB2BMessagesUrl = (params?: ListB2BMessagesParams) => {
+  const searchParams = new URLSearchParams();
+  if (params?.isRead !== undefined) searchParams.set("isRead", String(params.isRead));
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  const qs = searchParams.toString();
+  return `/api/b2b-messages${qs ? `?${qs}` : ""}`;
+};
+
+export const listB2BMessages = async (
+  params?: ListB2BMessagesParams,
+  options?: RequestInit,
+): Promise<B2BMessageListResponse> => {
+  return customFetch<B2BMessageListResponse>(getListB2BMessagesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListB2BMessagesQueryKey = (params?: ListB2BMessagesParams) => {
+  return [`/api/b2b-messages`, ...(params ? [params] : [])] as const;
+};
+
+export const getListB2BMessagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listB2BMessages>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListB2BMessagesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listB2BMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListB2BMessagesQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listB2BMessages>>> = ({
+    signal,
+  }) => listB2BMessages(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listB2BMessages>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useListB2BMessages<
+  TData = Awaited<ReturnType<typeof listB2BMessages>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListB2BMessagesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listB2BMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListB2BMessagesQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get B2B unread count (admin)
+ */
+export const getB2BUnreadCountUrl = () => {
+  return `/api/b2b-messages/unread-count`;
+};
+
+export const getB2BUnreadCount = async (
+  options?: RequestInit,
+): Promise<B2BUnreadCount> => {
+  return customFetch<B2BUnreadCount>(getB2BUnreadCountUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetB2BUnreadCountQueryKey = () => {
+  return [`/api/b2b-messages/unread-count`] as const;
+};
+
+export const getGetB2BUnreadCountQueryOptions = <
+  TData = Awaited<ReturnType<typeof getB2BUnreadCount>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getB2BUnreadCount>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetB2BUnreadCountQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getB2BUnreadCount>>> = ({
+    signal,
+  }) => getB2BUnreadCount({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getB2BUnreadCount>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetB2BUnreadCount<
+  TData = Awaited<ReturnType<typeof getB2BUnreadCount>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getB2BUnreadCount>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetB2BUnreadCountQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a B2B message (admin)
+ */
+export const getUpdateB2BMessageUrl = (id: number) => {
+  return `/api/b2b-messages/${id}`;
+};
+
+export const updateB2BMessage = async (
+  id: number,
+  body: UpdateB2BMessageBody,
+  options?: RequestInit,
+): Promise<B2BMessage> => {
+  return customFetch<B2BMessage>(getUpdateB2BMessageUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const getUpdateB2BMessageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateB2BMessage>>,
+    TError,
+    { id: number; data: BodyType<UpdateB2BMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateB2BMessage>>,
+    { id: number; data: BodyType<UpdateB2BMessageBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+    return updateB2BMessage(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions } as UseMutationOptions<
+    Awaited<ReturnType<typeof updateB2BMessage>>,
+    TError,
+    { id: number; data: BodyType<UpdateB2BMessageBody> },
+    TContext
+  >;
+};
+
+export function useUpdateB2BMessage<
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateB2BMessage>>,
+    TError,
+    { id: number; data: BodyType<UpdateB2BMessageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateB2BMessage>>,
+  TError,
+  { id: number; data: BodyType<UpdateB2BMessageBody> },
+  TContext
+> {
+  const mutationOptions = getUpdateB2BMessageMutationOptions(options);
+  return useMutation(mutationOptions);
+}
+
+/**
+ * @summary Delete a B2B message (admin)
+ */
+export const getDeleteB2BMessageUrl = (id: number) => {
+  return `/api/b2b-messages/${id}`;
+};
+
+export const deleteB2BMessage = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteB2BMessageUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteB2BMessageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteB2BMessage>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteB2BMessage>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+    return deleteB2BMessage(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions } as UseMutationOptions<
+    Awaited<ReturnType<typeof deleteB2BMessage>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+};
+
+export function useDeleteB2BMessage<
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteB2BMessage>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteB2BMessage>>,
+  TError,
+  { id: number },
+  TContext
+> {
+  const mutationOptions = getDeleteB2BMessageMutationOptions(options);
+  return useMutation(mutationOptions);
+}
+
+// ═══════════════════════════════════════════════════════
+//  VEHICLE YEARS
+// ═══════════════════════════════════════════════════════
+
+export const getListVehicleYearsUrl = (params?: ListVehicleYearsParams) => {
+  const sp = new URLSearchParams();
+  if (params?.vehicleVersionId) sp.set("vehicleVersionId", String(params.vehicleVersionId));
+  const qs = sp.toString();
+  return `/api/vehicle/years${qs ? `?${qs}` : ""}`;
+};
+
+export const listVehicleYears = async (
+  params?: ListVehicleYearsParams,
+  options?: RequestInit,
+): Promise<VehicleYear[]> => {
+  return customFetch<VehicleYear[]>(getListVehicleYearsUrl(params), { ...options, method: "GET" });
+};
+
+export const getListVehicleYearsQueryKey = (params?: ListVehicleYearsParams) => {
+  return [`/api/vehicle/years`, ...(params ? [params] : [])] as const;
+};
+
+export const getListVehicleYearsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listVehicleYears>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListVehicleYearsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listVehicleYears>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListVehicleYearsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listVehicleYears>>> = ({ signal }) =>
+    listVehicleYears(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listVehicleYears>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useListVehicleYears<
+  TData = Awaited<ReturnType<typeof listVehicleYears>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListVehicleYearsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listVehicleYears>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListVehicleYearsQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const createVehicleYear = async (
+  body: CreateVehicleYearBody,
+  options?: RequestInit,
+): Promise<VehicleYear> => {
+  return customFetch<VehicleYear>(`/api/vehicle/years`, {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const getCreateVehicleYearMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVehicleYear>>, TError,
+    { data: BodyType<CreateVehicleYearBody> }, TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createVehicleYear>>,
+    { data: BodyType<CreateVehicleYearBody> }
+  > = (props) => createVehicleYear(props.data, requestOptions);
+  return { mutationFn, ...mutationOptions } as UseMutationOptions<
+    Awaited<ReturnType<typeof createVehicleYear>>, TError,
+    { data: BodyType<CreateVehicleYearBody> }, TContext
+  >;
+};
+
+export function useCreateVehicleYear<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVehicleYear>>, TError,
+    { data: BodyType<CreateVehicleYearBody> }, TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  const mutationOptions = getCreateVehicleYearMutationOptions(options);
+  return useMutation(mutationOptions);
+}
+
+export const deleteVehicleYear = async (id: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/vehicle/years/${id}`, { ...options, method: "DELETE" });
+};
+
+export const getDeleteVehicleYearMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteVehicleYear>>, TError, { id: number }, TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteVehicleYear>>, { id: number }
+  > = (props) => deleteVehicleYear(props.id, requestOptions);
+  return { mutationFn, ...mutationOptions } as UseMutationOptions<
+    Awaited<ReturnType<typeof deleteVehicleYear>>, TError, { id: number }, TContext
+  >;
+};
+
+export function useDeleteVehicleYear<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteVehicleYear>>, TError, { id: number }, TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  const mutationOptions = getDeleteVehicleYearMutationOptions(options);
+  return useMutation(mutationOptions);
+}
+
+// ── Vehicle Year Products ────────────────────────────
+
+export const getVehicleYearProducts = async (
+  yearId: number,
+  options?: RequestInit,
+): Promise<VehicleYearProduct[]> => {
+  return customFetch<VehicleYearProduct[]>(`/api/vehicle/years/${yearId}/products`, {
+    ...options, method: "GET",
+  });
+};
+
+export const getGetVehicleYearProductsQueryKey = (yearId: number) => {
+  return [`/api/vehicle/years/${yearId}/products`] as const;
+};
+
+export const getGetVehicleYearProductsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVehicleYearProducts>>,
+  TError = ErrorType<unknown>,
+>(
+  yearId: number,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getVehicleYearProducts>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetVehicleYearProductsQueryKey(yearId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVehicleYearProducts>>> = ({ signal }) =>
+    getVehicleYearProducts(yearId, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVehicleYearProducts>>, TError, TData
+  > & { queryKey: QueryKey };
+};
+
+export function useGetVehicleYearProducts<
+  TData = Awaited<ReturnType<typeof getVehicleYearProducts>>,
+  TError = ErrorType<unknown>,
+>(
+  yearId: number,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getVehicleYearProducts>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVehicleYearProductsQueryOptions(yearId, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const setVehicleYearProducts = async (
+  yearId: number,
+  body: SetYearProductsBody,
+  options?: RequestInit,
+): Promise<{ id: number; productId: number }[]> => {
+  return customFetch<{ id: number; productId: number }[]>(`/api/vehicle/years/${yearId}/products`, {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const getSetVehicleYearProductsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setVehicleYearProducts>>, TError,
+    { yearId: number; data: BodyType<SetYearProductsBody> }, TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setVehicleYearProducts>>,
+    { yearId: number; data: BodyType<SetYearProductsBody> }
+  > = (props) => setVehicleYearProducts(props.yearId, props.data, requestOptions);
+  return { mutationFn, ...mutationOptions } as UseMutationOptions<
+    Awaited<ReturnType<typeof setVehicleYearProducts>>, TError,
+    { yearId: number; data: BodyType<SetYearProductsBody> }, TContext
+  >;
+};
+
+export function useSetVehicleYearProducts<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setVehicleYearProducts>>, TError,
+    { yearId: number; data: BodyType<SetYearProductsBody> }, TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  const mutationOptions = getSetVehicleYearProductsMutationOptions(options);
+  return useMutation(mutationOptions);
 }

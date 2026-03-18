@@ -31,3 +31,6 @@ ALTER TABLE categories ADD COLUMN IF NOT EXISTS image TEXT;
 -- ============================================================
 
 
+
+
+

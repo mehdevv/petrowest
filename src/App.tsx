@@ -19,6 +19,7 @@ import Categories from "@/pages/admin/Categories";
 import Catalogue from "@/pages/admin/Catalogue";
 import Delivery from "@/pages/admin/Delivery";
 import VehicleFilter from "@/pages/admin/VehicleFilter";
+import B2BMessages from "@/pages/admin/B2BMessages";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/admin/catalogue" component={Catalogue} />
       <Route path="/admin/delivery" component={Delivery} />
       <Route path="/admin/vehicle-filter" component={VehicleFilter} />
+      <Route path="/admin/b2b-messages" component={B2BMessages} />
       
       <Route component={NotFound} />
     </Switch>
