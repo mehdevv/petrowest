@@ -1,0 +1,20 @@
+name: Keep Supabase Alive
+on:
+  schedule:
+    - cron: '0 9 * * 1,4'  # Every Monday and Thursday at 9AM UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        env:
+          VITE_SUPA_PUBLIC: ${{ secrets.VITE_SUPA_PUBLIC }}
+          VITE_SUPA_API: ${{ secrets.VITE_SUPA_API }}
+        run: |
+          curl -s \
+            -H "apikey: $VITE_SUPA_API" \
+            -H "Authorization: Bearer $VITE_SUPA_API" \
+            "$VITE_SUPA_PUBLIC/rest/v1/?limit=1"
+          echo "Ping done ✅"
