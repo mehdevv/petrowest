@@ -1,0 +1,23 @@
+name: Cleanup Page Views (24h)
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Every day at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate & cleanup page_views
+        env:
+          VITE_SUPA_PUBLIC: ${{ secrets.VITE_SUPA_PUBLIC }}
+          VITE_SUPA_API: ${{ secrets.VITE_SUPA_API }}
+        run: |
+          res=$(curl -s -X POST \
+            -H "apikey: $VITE_SUPA_API" \
+            -H "Authorization: Bearer $VITE_SUPA_API" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "$VITE_SUPA_PUBLIC/rest/v1/rpc/aggregate_and_cleanup_page_views")
+          echo "$res"
+          echo "Cleanup done ✅"

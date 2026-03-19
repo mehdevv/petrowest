@@ -130,7 +130,6 @@ export default function Dashboard() {
   const { data: recentOrders } = useListOrders({ limit: 5 });
   const { data: visitStats } = useVisitStats();
   const { data: funnel } = useFunnelStats();
-
   const getStatusColor = (status: string) => {
     switch(status.toLowerCase()) {
       case 'pending': return 'bg-orange-500 hover:bg-orange-600';
