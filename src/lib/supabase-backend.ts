@@ -1173,6 +1173,24 @@ export async function handleApiRoute(
   }
 
   // ═══════════════════════════════════════════════════════
+  //  PAGE VIEWS / ANALYTICS
+  // ═══════════════════════════════════════════════════════
+
+  if (method === "GET" && path === "/api/page-views/stats") {
+    const { data, error } = await supabase.rpc("get_visit_stats");
+    if (error) throw new RouteError(500, error.message);
+    const result = typeof data === "string" ? JSON.parse(data) : data;
+    return { data: result, status: 200 };
+  }
+
+  if (method === "GET" && path === "/api/page-views/funnel") {
+    const { data, error } = await supabase.rpc("get_funnel_stats");
+    if (error) throw new RouteError(500, error.message);
+    const result = typeof data === "string" ? JSON.parse(data) : data;
+    return { data: result, status: 200 };
+  }
+
+  // ═══════════════════════════════════════════════════════
   //  FALLBACK
   // ═══════════════════════════════════════════════════════
   throw new RouteError(404, `Route not found: ${method} ${path}`);
