@@ -10,9 +10,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, Download } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 
 const STATUSES = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"];
 const STATUS_LABELS: Record<string, string> = {
@@ -56,6 +57,48 @@ export default function Orders() {
     });
   };
 
+  const exportToExcel = () => {
+    const orders = ordersData?.orders;
+    if (!orders || orders.length === 0) {
+      toast({ title: "Aucune commande à exporter.", variant: "destructive" });
+      return;
+    }
+
+    const rows = orders.map((o) => ({
+      "N°": o.id,
+      "Date": format(new Date(o.createdAt), "dd/MM/yyyy HH:mm"),
+      "Client": o.customerName,
+      "Téléphone": o.phone,
+      "Produit": o.productName || "",
+      "Quantité": o.quantity,
+      "Wilaya": o.wilayaName,
+      "Livraison": o.deliveryType === "domicile" ? "Domicile" : "Stop Desk",
+      "Frais Livraison (DA)": o.deliveryPrice,
+      "Total (DA)": o.totalPrice,
+      "Statut": STATUS_LABELS[o.status] || o.status,
+      "Adresse": o.address || "",
+      "Notes": o.notes || "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    const colWidths = [
+      { wch: 6 }, { wch: 18 }, { wch: 22 }, { wch: 14 },
+      { wch: 30 }, { wch: 8 }, { wch: 16 }, { wch: 12 },
+      { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 30 }, { wch: 20 },
+    ];
+    ws["!cols"] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Commandes");
+
+    const filterLabel = statusFilter !== "All" ? `_${STATUS_LABELS[statusFilter] || statusFilter}` : "";
+    const dateStr = format(new Date(), "yyyy-MM-dd");
+    XLSX.writeFile(wb, `Commandes_PetroWest${filterLabel}_${dateStr}.xlsx`);
+
+    toast({ title: `${orders.length} commande(s) exportée(s) avec succès.` });
+  };
+
   const getStatusColor = (status: string) => {
     switch(status.toLowerCase()) {
       case 'pending': return 'bg-orange-500';
@@ -94,14 +137,24 @@ export default function Orders() {
           ))}
         </div>
         
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Rechercher nom ou téléphone..." 
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex gap-2 w-full md:w-auto items-center">
+          <div className="relative flex-1 md:w-72">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Rechercher nom ou téléphone..." 
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={exportToExcel}
+            className="shrink-0 gap-2"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Exporter Excel</span>
+          </Button>
         </div>
       </div>
 
