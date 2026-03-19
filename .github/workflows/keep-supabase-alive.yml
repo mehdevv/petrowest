@@ -16,5 +16,5 @@ jobs:
           curl -s \
             -H "apikey: $VITE_SUPA_API" \
             -H "Authorization: Bearer $VITE_SUPA_API" \
-            "$VITE_SUPA_PUBLIC/rest/v1/?limit=1"
+            "$VITE_SUPA_PUBLIC/rest/v1/page_views?select=*&limit=1"
           echo "Ping done ✅"
