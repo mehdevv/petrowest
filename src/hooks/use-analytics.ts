@@ -9,6 +9,8 @@ declare global {
 }
 
 const VISITOR_KEY = "pw_visitor_id";
+const LAST_VISIT_TRACK_KEY = "pw_last_visit_track_at";
+const VISIT_TRACK_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 function getVisitorId(): string {
   let id = localStorage.getItem(VISITOR_KEY);
@@ -19,6 +21,24 @@ function getVisitorId(): string {
   return id;
 }
 
+function shouldTrackVisitNow(): boolean {
+  const raw = localStorage.getItem(LAST_VISIT_TRACK_KEY);
+  const now = Date.now();
+
+  if (!raw) {
+    localStorage.setItem(LAST_VISIT_TRACK_KEY, String(now));
+    return true;
+  }
+
+  const last = Number(raw);
+  if (!Number.isFinite(last) || now - last >= VISIT_TRACK_WINDOW_MS) {
+    localStorage.setItem(LAST_VISIT_TRACK_KEY, String(now));
+    return true;
+  }
+
+  return false;
+}
+
 export function usePageTracking() {
   const [location] = useLocation();
   const prevLocation = useRef<string | null>(null);
@@ -26,6 +46,7 @@ export function usePageTracking() {
   useEffect(() => {
     if (prevLocation.current === location) return;
     prevLocation.current = location;
+    if (!shouldTrackVisitNow()) return;
 
     if (window.gtag) {
       window.gtag("event", "page_view", {

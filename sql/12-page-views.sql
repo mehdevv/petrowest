@@ -27,11 +27,28 @@ CREATE OR REPLACE FUNCTION record_page_view(
   p_visitor_id TEXT DEFAULT NULL
 )
 RETURNS JSON AS $$
+DECLARE
+  v_exists BOOLEAN := FALSE;
 BEGIN
-  INSERT INTO page_views (page_path, referrer, visitor_id)
-  VALUES (p_page_path, p_referrer, p_visitor_id);
+  IF p_visitor_id IS NOT NULL THEN
+    SELECT EXISTS (
+      SELECT 1
+      FROM page_views
+      WHERE visitor_id = p_visitor_id
+        AND created_at >= NOW() - INTERVAL '1 hour'
+    )
+    INTO v_exists;
+  END IF;
 
-  RETURN json_build_object('success', true);
+  IF NOT v_exists THEN
+    INSERT INTO page_views (page_path, referrer, visitor_id)
+    VALUES (p_page_path, p_referrer, p_visitor_id);
+  END IF;
+
+  RETURN json_build_object(
+    'success', true,
+    'recorded', NOT v_exists
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
