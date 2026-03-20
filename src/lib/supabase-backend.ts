@@ -62,6 +62,7 @@ function transformProduct(row: any) {
     featured: row.featured,
     securitySheetUrl: row.security_sheet_url ?? null,
     technicalSheetUrl: row.technical_sheet_url ?? null,
+    metaPixelId: row.meta_pixel_id ?? null,
     createdAt: row.created_at,
   };
 }
@@ -232,6 +233,7 @@ export async function handleApiRoute(
       featured: body.featured ?? false,
       security_sheet_url: body.securitySheetUrl ?? null,
       technical_sheet_url: body.technicalSheetUrl ?? null,
+      meta_pixel_id: body.metaPixelId ?? null,
     };
     const { data, error } = await supabase
       .from("products")
@@ -296,6 +298,7 @@ export async function handleApiRoute(
     if (body.featured !== undefined) updates.featured = body.featured;
     if (body.securitySheetUrl !== undefined) updates.security_sheet_url = body.securitySheetUrl;
     if (body.technicalSheetUrl !== undefined) updates.technical_sheet_url = body.technicalSheetUrl;
+    if (body.metaPixelId !== undefined) updates.meta_pixel_id = body.metaPixelId;
     updates.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase

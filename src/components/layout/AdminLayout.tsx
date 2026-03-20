@@ -1,10 +1,10 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { 
   LayoutDashboard, 
   ShoppingCart, 
   Package, 
-  Tags, 
   Truck, 
   CarFront, 
   LogOut,
@@ -16,18 +16,21 @@ import { Button } from "@/components/ui/button";
 import { useAdminGetMe, useAdminLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
-const NAV_ITEMS = [
-  { label: "Tableau de Bord", href: "/admin", icon: LayoutDashboard },
-  { label: "Commandes", href: "/admin/orders", icon: ShoppingCart },
-  { label: "Produits", href: "/admin/products", icon: Package },
-  { label: "Catalogue", href: "/admin/catalogue", icon: BookOpen },
-  { label: "Prix de Livraison", href: "/admin/delivery", icon: Truck },
-  { label: "Filtre Véhicule", href: "/admin/vehicle-filter", icon: CarFront },
-  { label: "Messages B2B", href: "/admin/b2b-messages", icon: Building2 },
-];
+const NAV_KEYS = [
+  { labelKey: "admin.nav.dashboard", href: "/admin", icon: LayoutDashboard },
+  { labelKey: "admin.nav.orders", href: "/admin/orders", icon: ShoppingCart },
+  { labelKey: "admin.nav.products", href: "/admin/products", icon: Package },
+  { labelKey: "admin.nav.catalogue", href: "/admin/catalogue", icon: BookOpen },
+  { labelKey: "admin.nav.delivery", href: "/admin/delivery", icon: Truck },
+  { labelKey: "admin.nav.vehicle", href: "/admin/vehicle-filter", icon: CarFront },
+  { labelKey: "admin.nav.b2b", href: "/admin/b2b-messages", icon: Building2 },
+] as const;
 
 export function AdminLayout({ children }: { children: ReactNode }) {
+  const { t, i18n } = useTranslation();
+  const isArabic = (i18n.language || "").startsWith("ar");
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -44,7 +47,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     }
   });
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">Chargement...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">{t("admin.loading")}</div>;
   
   if (isError || !admin) {
     setLocation("/admin/login");
@@ -60,7 +63,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {NAV_KEYS.map((item) => {
           const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
           return (
             <Link 
@@ -73,14 +76,14 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               }`}
             >
               <item.icon className={`w-5 h-5 ${isActive ? "text-secondary" : ""}`} />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
       </nav>
 
       <div className="p-4 border-t border-white/10">
-        <div className="mb-4 px-4 text-sm text-white/50">Connecté en tant que {admin.name}</div>
+        <div className="mb-4 px-4 text-sm text-white/50">{t("admin.connectedAs", { name: admin.name })}</div>
         <Button 
           variant="destructive" 
           className="w-full justify-start gap-2" 
@@ -88,7 +91,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           disabled={logout.isPending}
         >
           <LogOut className="w-4 h-4" />
-          {logout.isPending ? "Déconnexion..." : "Déconnexion"}
+          {logout.isPending ? t("admin.loggingOut") : t("admin.logout")}
         </Button>
       </div>
     </div>
@@ -97,12 +100,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:block w-64 fixed inset-y-0 z-10">
+      <aside className={`hidden md:block w-64 fixed inset-y-0 z-10 ${isArabic ? "right-0" : "left-0"}`}>
         <SidebarContent />
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <main className={`flex-1 flex flex-col min-h-screen ${isArabic ? "md:mr-64" : "md:ml-64"}`}>
         <header className="bg-white border-b h-16 flex items-center justify-between px-4 sm:px-6 z-10">
           <div className="flex items-center gap-4">
             <Sheet>
@@ -111,15 +114,20 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64 bg-[#001D3D] border-r-0">
+              <SheetContent side={isArabic ? "right" : "left"} className="p-0 w-64 bg-[#001D3D] border-r-0">
                 <SidebarContent />
               </SheetContent>
             </Sheet>
-            <h1 className="font-display text-2xl text-primary md:hidden">Petro West Admin</h1>
+            <h1 className="font-display text-2xl text-primary md:hidden">{t("admin.sidebarTitle")}</h1>
           </div>
-          
-          <div className="text-sm font-medium text-muted-foreground hidden sm:block">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="outline" size="sm" />
+            <div className="text-sm font-medium text-muted-foreground hidden sm:block">
+              {new Date().toLocaleDateString(
+                i18n.language === "ar" ? "ar-DZ" : i18n.language === "en" ? "en-GB" : "fr-FR",
+                { weekday: "long", year: "numeric", month: "long", day: "numeric" }
+              )}
+            </div>
           </div>
         </header>
         

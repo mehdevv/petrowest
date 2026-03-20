@@ -1,12 +1,15 @@
 import { ReactNode, useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Mail, Phone, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useListProducts } from "@workspace/api-client-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 // ─── Navbar search with live dropdown ────────────────────────────────────────
 function NavSearch() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -60,7 +63,7 @@ function NavSearch() {
               setOpen(true);
             }}
             onFocus={() => setOpen(true)}
-            placeholder="Rechercher des produits..."
+            placeholder={t("nav.searchPlaceholder")}
             className="pl-9 pr-8 h-9 text-sm w-full rounded-full bg-white/15 border-white/25 text-white placeholder:text-white/50 focus-visible:ring-secondary/50"
           />
           {query && (
@@ -80,7 +83,7 @@ function NavSearch() {
         <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
           {products.length === 0 ? (
             <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-              Aucun produit trouvé
+              {t("nav.noProducts")}
             </div>
           ) : (
             <>
@@ -127,7 +130,7 @@ function NavSearch() {
                 className="w-full px-4 py-2 bg-gray-50 text-xs font-semibold text-primary hover:bg-gray-100 transition-colors border-t flex items-center justify-center gap-1"
               >
                 <Search className="w-3 h-3" />
-                Voir tous les résultats pour «{query}»
+                {t("nav.seeAllResults", { query })}
               </button>
             </>
           )}
@@ -139,6 +142,7 @@ function NavSearch() {
 
 // ─── Mobile search bar ────────────────────────────────────────────────────────
 function MobileNavSearch({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -173,7 +177,7 @@ function MobileNavSearch({ onClose }: { onClose: () => void }) {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher des produits..."
+            placeholder={t("nav.searchPlaceholder")}
             className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 h-10"
           />
         </div>
@@ -185,7 +189,7 @@ function MobileNavSearch({ onClose }: { onClose: () => void }) {
       {query.trim().length >= 2 && (
         <div className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100">
           {products.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-muted-foreground text-center">Aucun produit trouvé</div>
+            <div className="px-4 py-3 text-sm text-muted-foreground text-center">{t("nav.noProducts")}</div>
           ) : (
             <>
               {products.map((product) => (
@@ -215,7 +219,7 @@ function MobileNavSearch({ onClose }: { onClose: () => void }) {
                 }}
                 className="w-full px-4 py-2 bg-gray-50 text-xs font-semibold text-primary text-center"
               >
-                Voir tous les résultats →
+                {t("nav.seeAllArrow")}
               </button>
             </>
           )}
@@ -227,9 +231,12 @@ function MobileNavSearch({ onClose }: { onClose: () => void }) {
 
 // ─── Main Layout ──────────────────────────────────────────────────────────────
 export function PublicLayout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [location] = useLocation();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const letterParagraphs = t("footer.letter", { returnObjects: true }) as string[];
+  const activityItems = t("footer.activitiesItems", { returnObjects: true }) as string[];
 
   const isHome = location === "/";
 
@@ -270,11 +277,12 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
           {/* Right side */}
           <div className="flex items-center gap-2 ml-auto md:ml-0">
+            <LanguageSwitcher variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20 md:h-9" />
             {/* Mobile search toggle */}
           <button 
               className="md:hidden p-2 rounded-full hover:bg-white/10 transition"
               onClick={() => setMobileSearchOpen((v) => !v)}
-              aria-label="Rechercher"
+              aria-label={t("nav.searchAria")}
             >
               {mobileSearchOpen ? (
                 <X className="w-5 h-5" />
@@ -288,7 +296,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               variant="secondary"
               className="font-display tracking-wider text-base px-6 hover-elevate active-elevate-2"
             >
-              <Link href="/shop">Acheter</Link>
+              <Link href="/shop">{t("nav.buy")}</Link>
               </Button>
           </div>
         </div>
@@ -308,7 +316,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         className="bg-[#001D3D] text-white pt-16 pb-8 border-t-4 border-secondary"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-          <div>
+          <div className="md:max-h-[28rem] md:overflow-y-auto pr-1">
             <div className="flex items-center mb-6">
               <img
                 src={`${import.meta.env.BASE_URL}logo.png`}
@@ -316,25 +324,29 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                 className="h-12 w-auto"
               />
             </div>
-            <p className="text-muted-foreground max-w-sm">
-              Des lubrifiants fiables qui protègent les moteurs et améliorent
-              les performances. Livraison d'huiles moteur de qualité supérieure
-              dans les 58 wilayas d'Algérie.
-            </p>
-          </div>
-          
-          <div>
-            <h3 className="font-display text-2xl mb-6 text-secondary">Liens Rapides</h3>
-            <ul className="space-y-3 font-medium text-muted-foreground">
-              <li><Link href="/" className="hover:text-white transition-colors">Accueil</Link></li>
-              <li><Link href="/shop" className="hover:text-white transition-colors">Tous les Produits</Link></li>
-              <li><a href="#" className="hover:text-white transition-colors">À Propos</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Politique de Livraison</a></li>
-            </ul>
+            <div className="text-muted-foreground text-sm leading-relaxed space-y-3 max-w-prose">
+              {Array.isArray(letterParagraphs) &&
+                letterParagraphs.map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+            </div>
           </div>
 
           <div>
-            <h3 className="font-display text-2xl mb-6 text-secondary">Contactez-nous</h3>
+            <h3 className="font-display text-2xl mb-4 text-secondary">{t("footer.activitiesTitle")}</h3>
+            <p className="text-muted-foreground text-sm mb-4">{t("footer.activitiesIntro")}</p>
+            {Array.isArray(activityItems) && activityItems.length > 0 && (
+              <ul className="list-disc ps-5 space-y-1.5 text-muted-foreground text-sm mb-4">
+                {activityItems.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            )}
+            <p className="text-muted-foreground text-sm mb-6">{t("footer.activitiesClosing")}</p>
+          </div>
+
+          <div>
+            <h3 className="font-display text-2xl mb-6 text-secondary">{t("footer.contactUs")}</h3>
             <div className="space-y-4 text-muted-foreground">
               <p>Cité Trouville rue n°01 N381<br />Arzew – Oran, Algérie 31200</p>
               <div className="flex items-center gap-2">
@@ -374,7 +386,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-white/10 pt-8 flex items-center justify-center text-sm text-white/50">
-          <p>© {new Date().getFullYear()} Petro West. Tous droits réservés.</p>
+          <p>{t("footer.copyright", { year: new Date().getFullYear() })}</p>
         </div>
       </footer>
     </div>

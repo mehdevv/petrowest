@@ -45,6 +45,8 @@ export interface Product {
   securitySheetUrl?: string | null;
   /** @nullable */
   technicalSheetUrl?: string | null;
+  /** @nullable */
+  metaPixelId?: string | null;
   createdAt: string;
 }
 
@@ -76,6 +78,8 @@ export interface CreateProductBody {
   securitySheetUrl?: string | null;
   /** @nullable */
   technicalSheetUrl?: string | null;
+  /** @nullable */
+  metaPixelId?: string | null;
 }
 
 export interface UpdateProductBody {
@@ -99,6 +103,8 @@ export interface UpdateProductBody {
   securitySheetUrl?: string | null;
   /** @nullable */
   technicalSheetUrl?: string | null;
+  /** @nullable */
+  metaPixelId?: string | null;
 }
 
 export interface ToggleStockBody {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { ProductCard } from "@/components/ui-custom/ProductCard";
 import { Button } from "@/components/ui/button";
@@ -111,6 +112,7 @@ function activeCount(
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Shop() {
+  const { t } = useTranslation();
   const [location] = useLocation();
 
   // Filters
@@ -184,7 +186,7 @@ export default function Shop() {
       {/* Top bar: results + clear */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Filtres
+          {t("shop.filters")}
           {numActive > 0 && (
             <Badge className="ml-2 px-1.5 py-0 text-xs bg-secondary text-primary">
               {numActive}
@@ -196,7 +198,7 @@ export default function Shop() {
             onClick={clearFilters}
             className="text-xs text-destructive hover:underline flex items-center gap-1"
           >
-            <X className="w-3 h-3" /> Effacer
+            <X className="w-3 h-3" /> {t("shop.clear")}
           </button>
         )}
       </div>
@@ -204,7 +206,7 @@ export default function Shop() {
       {/* In stock toggle */}
       <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
         <span className="text-xs font-bold uppercase tracking-widest text-primary/80">
-          En Stock Seulement
+          {t("shop.inStockOnly")}
         </span>
         <Switch
           checked={inStockOnly}
@@ -218,7 +220,7 @@ export default function Shop() {
 
       {/* Categories */}
       {categoriesData && categoriesData.length > 0 && (
-        <FilterSection title="Catégorie" count={selectedCategoryId ? 1 : 0}>
+        <FilterSection title={t("shop.category")} count={selectedCategoryId ? 1 : 0}>
           {categoriesData.map((cat) => (
             <FilterCheckbox
               key={cat.id}
@@ -237,7 +239,7 @@ export default function Shop() {
 
       {/* Brands */}
       {brandsData && brandsData.length > 0 && (
-        <FilterSection title="Marque" count={selectedBrand ? 1 : 0}>
+        <FilterSection title={t("shop.brand")} count={selectedBrand ? 1 : 0}>
           {brandsData.map((brand) => (
             <FilterCheckbox
               key={brand.id}
@@ -256,7 +258,7 @@ export default function Shop() {
 
       {/* Oil types */}
       {oilTypesData && oilTypesData.length > 0 && (
-        <FilterSection title="Type d'Huile" count={selectedOilType ? 1 : 0}>
+        <FilterSection title={t("shop.oilType")} count={selectedOilType ? 1 : 0}>
           {oilTypesData.map((type) => (
             <FilterCheckbox
               key={type.id}
@@ -275,7 +277,7 @@ export default function Shop() {
 
       {/* Price Range */}
       <FilterSection
-        title="Prix (DA)"
+        title={t("shop.priceDa")}
         count={priceRange[0] > 0 || priceRange[1] < 15000 ? 1 : 0}
       >
         <div className="px-2 pt-1 pb-2">
@@ -312,9 +314,9 @@ export default function Shop() {
         </div>
         <div className="max-w-7xl mx-auto relative z-10 text-center">
           <h1 className="font-display text-5xl md:text-6xl text-white mb-2 tracking-wide">
-            Notre Boutique
+            {t("shop.title")}
           </h1>
-          <p className="text-secondary font-medium">Accueil / Boutique</p>
+          <p className="text-secondary font-medium">{t("shop.breadcrumb")}</p>
         </div>
       </div>
 
@@ -322,13 +324,13 @@ export default function Shop() {
         {/* ── Mobile Filter Bar ── */}
         <div className="md:hidden flex items-center justify-between mb-2">
           <span className="font-semibold text-base">
-            {productsData?.total || 0} produits
+            {t("shop.mobileTotal", { count: productsData?.total || 0 })}
           </span>
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <SlidersHorizontal className="w-4 h-4" />
-                Filtres
+                {t("shop.filters")}
                 {numActive > 0 && (
                   <Badge className="ml-1 px-1.5 py-0 text-xs bg-secondary text-primary">
                     {numActive}
@@ -356,7 +358,7 @@ export default function Shop() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
               className="pl-9 h-11 bg-white shadow-sm"
-              placeholder="Rechercher dans les produits..."
+              placeholder={t("shop.searchProducts")}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
@@ -373,7 +375,9 @@ export default function Shop() {
 
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <span className="font-semibold text-base text-muted-foreground">
-              {productsData?.total || 0} produit{(productsData?.total || 0) !== 1 ? "s" : ""} trouvé{(productsData?.total || 0) !== 1 ? "s" : ""}
+              {(productsData?.total || 0) === 1
+                ? t("shop.foundOne", { count: 1 })
+                : t("shop.foundMany", { count: productsData?.total || 0 })}
             </span>
             {numActive > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -407,7 +411,7 @@ export default function Shop() {
                     onClick={() => { setInStockOnly(false); setPage(1); }}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium hover:bg-green-200"
                   >
-                    En Stock <X className="w-3 h-3" />
+                    {t("shop.inStockChip")} <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
@@ -427,10 +431,10 @@ export default function Shop() {
             <div className="text-center py-24 bg-white rounded-xl border border-dashed">
               <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-30" />
               <h3 className="font-display text-3xl text-muted-foreground mb-4">
-                Aucun Produit Trouvé
+                {t("shop.noneFound")}
               </h3>
               <Button onClick={clearFilters} variant="secondary">
-                Effacer les Filtres
+                {t("shop.clearFilters")}
               </Button>
             </div>
           ) : (
@@ -449,17 +453,17 @@ export default function Shop() {
                     disabled={page === 1}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    Précédent
+                    {t("shop.prev")}
                   </Button>
                   <div className="flex items-center px-4 font-bold text-primary">
-                    Page {page} sur {Math.ceil(productsData.total / 12)}
+                    {t("shop.pageOf", { page, total: Math.ceil(productsData.total / 12) })}
                   </div>
                   <Button
                     variant="outline"
                     disabled={page >= Math.ceil(productsData.total / 12)}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    Suivant
+                    {t("shop.next")}
                   </Button>
                 </div>
               )}

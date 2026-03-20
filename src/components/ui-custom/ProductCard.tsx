@@ -1,9 +1,11 @@
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Product } from "@workspace/api-client-react";
 
 export function ProductCard({ product }: { product: Product }) {
+  const { t } = useTranslation();
   const imageUrl = product.images?.[0] || "https://images.unsplash.com/photo-1623815148007-850d995cb4d5?w=500&h=500&fit=crop";
 
   return (
@@ -17,7 +19,7 @@ export function ProductCard({ product }: { product: Product }) {
           />
           {!product.inStock && (
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
-              <Badge variant="destructive" className="text-[10px] sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 font-bold tracking-wider">Rupture</Badge>
+              <Badge variant="destructive" className="text-[10px] sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 font-bold tracking-wider">{t("product.cardOut")}</Badge>
             </div>
           )}
         </div>
@@ -40,7 +42,7 @@ export function ProductCard({ product }: { product: Product }) {
               {product.price.toLocaleString()} <span className="text-[10px] sm:text-lg text-muted-foreground">DA</span>
             </div>
             <Button variant="default" size="sm" className="font-bold hover-elevate hidden sm:inline-flex text-xs">
-              Voir
+              {t("product.view")}
             </Button>
           </div>
         </div>

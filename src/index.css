@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=Readex+Pro:wght@160..700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -105,6 +105,7 @@
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-display: 'Bebas Neue', sans-serif;
+  --app-font-arabic: 'Readex Pro', 'Inter', sans-serif;
   --radius: 0.375rem; /* 6px as per spec */
   
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -169,9 +170,46 @@
   }
 }
 
+html.locale-ar,
+html.locale-ar body {
+  font-family: var(--app-font-arabic);
+}
+
+/* Force Arabic typography consistently across all text nodes */
+html.locale-ar :where(
+  h1, h2, h3, h4, h5, h6,
+  p, span, a, li, label, small, strong, em,
+  button, input, textarea, select, option,
+  td, th, div
+) {
+  font-family: var(--app-font-arabic);
+}
+
+/* Override display font + uppercase heading treatment in Arabic */
+html.locale-ar h1,
+html.locale-ar h2,
+html.locale-ar h3,
+html.locale-ar h4,
+html.locale-ar h5,
+html.locale-ar h6,
+html.locale-ar .font-display {
+  font-family: var(--app-font-arabic) !important;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 @keyframes marquee {
   0%   { transform: translateX(0); }
   /* 4 copies: move exactly 1/4 of total width = one copy width.
      This ensures on any screen width the repeat is never visible. */
   100% { transform: translateX(-25%); }
+}
+
+@keyframes marquee-rtl {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(25%); }
+}
+
+.animate-marquee-rtl {
+  animation: marquee-rtl 40s linear infinite;
 }

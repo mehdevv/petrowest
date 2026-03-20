@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -15,17 +16,59 @@ import { useGetProduct, useGetDeliveryPrice, useCreateOrder } from "@workspace/a
 import { ALGERIA_WILAYAS } from "@/lib/constants";
 import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart, Building2, Home, FileText } from "lucide-react";
 
-const orderSchema = z.object({
-  customerName: z.string().min(2, "Le nom est requis"),
-  phone: z.string().min(8, "Numéro de téléphone valide requis"),
-  wilayaCode: z.string().min(1, "La wilaya est requise"),
-  address: z.string().min(5, "Adresse complète requise"),
-  quantity: z.coerce.number().min(1),
-});
-
 type DeliveryType = "stopdesk" | "domicile";
 
+declare global {
+  interface Window {
+    fbq?: (...args: unknown[]) => void;
+    _fbq?: (...args: unknown[]) => void;
+    __PW_FB_PIXELS?: Record<string, true>;
+  }
+}
+
+function ensureMetaPixel(pixelId: string): boolean {
+  if (typeof window === "undefined" || !pixelId.trim()) return false;
+
+  if (!window.fbq) {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = "https://connect.facebook.net/en_US/fbevents.js";
+    document.head.appendChild(script);
+
+    const fbqStub = function (...args: unknown[]) {
+      const q = fbqStub as any;
+      q.queue = q.queue || [];
+      q.queue.push(args);
+    } as any;
+    fbqStub.loaded = true;
+    fbqStub.version = "2.0";
+    fbqStub.queue = [];
+    window.fbq = fbqStub;
+    window._fbq = fbqStub;
+  }
+
+  window.__PW_FB_PIXELS = window.__PW_FB_PIXELS || {};
+  if (!window.__PW_FB_PIXELS[pixelId]) {
+    window.fbq?.("init", pixelId);
+    window.__PW_FB_PIXELS[pixelId] = true;
+  }
+  return true;
+}
+
 export default function ProductDetails() {
+  const { t } = useTranslation();
+  const orderSchema = useMemo(
+    () =>
+      z.object({
+        customerName: z.string().min(2, t("product.errors.name")),
+        phone: z.string().min(8, t("product.errors.phone")),
+        wilayaCode: z.string().min(1, t("product.errors.wilaya")),
+        address: z.string().min(5, t("product.errors.address")),
+        quantity: z.coerce.number().min(1),
+      }),
+    [t]
+  );
+
   const [, params] = useRoute("/shop/:slug");
   const slug = params?.slug || "";
   
@@ -39,7 +82,7 @@ export default function ProductDetails() {
   const [pdfViewerTitle, setPdfViewerTitle] = useState("");
 
   const form = useForm<z.infer<typeof orderSchema>>({
-    resolver: zodResolver(orderSchema),
+    resolver: zodResolver(orderSchema) as any,
     defaultValues: {
       customerName: "",
       phone: "",
@@ -70,8 +113,8 @@ export default function ProductDetails() {
     }
   }, [product]);
 
-  if (isLoading) return <PublicLayout><div className="pt-32 min-h-screen text-center text-xl">Chargement...</div></PublicLayout>;
-  if (isError || !product) return <PublicLayout><div className="pt-32 min-h-screen text-center text-xl">Produit introuvable.</div></PublicLayout>;
+  if (isLoading) return <PublicLayout><div className="pt-32 min-h-screen text-center text-xl">{t("product.loading")}</div></PublicLayout>;
+  if (isError || !product) return <PublicLayout><div className="pt-32 min-h-screen text-center text-xl">{t("product.notFound")}</div></PublicLayout>;
 
   const productTotal = product.price * (quantity || 1);
   const deliveryCost = deliveryData
@@ -106,6 +149,15 @@ export default function ProductDetails() {
   };
 
   const scrollToOrder = () => {
+    if (product.metaPixelId && ensureMetaPixel(product.metaPixelId)) {
+      window.fbq?.("track", "Purchase", {
+        content_ids: [String(product.id)],
+        content_name: product.name,
+        content_type: "product",
+        currency: "DZD",
+        value: product.price,
+      });
+    }
     document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -204,7 +256,7 @@ export default function ProductDetails() {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-8">
           {/* Breadcrumb */}
           <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-4 sm:mb-8 truncate">
-            Accueil / Boutique / {product.categoryName || 'Huile'} / <span className="text-primary">{product.name}</span>
+            {t("product.breadcrumbPrefix", { category: product.categoryName || t("product.oilFallback") })}<span className="text-primary">{product.name}</span>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl border border-border/50 overflow-hidden mb-6 sm:mb-12">
@@ -229,7 +281,7 @@ export default function ProductDetails() {
                       className="w-full h-full object-contain mix-blend-multiply"
                     />
                   </AnimatePresence>
-                  <button onClick={() => setLightboxOpen(true)} className="absolute top-3 right-3 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-2 sm:opacity-0 sm:group-hover:opacity-100 transition shadow-md" title="Agrandir">
+                  <button onClick={() => setLightboxOpen(true)} className="absolute top-3 right-3 bg-white/80 hover:bg-white text-primary border border-border rounded-full p-2 sm:opacity-0 sm:group-hover:opacity-100 transition shadow-md" title={t("product.zoom")}>
                     <ZoomIn className="w-4 h-4" />
                   </button>
                   {images.length > 1 && (
@@ -252,7 +304,7 @@ export default function ProductDetails() {
                     <div className="hidden sm:flex gap-3 overflow-x-auto pb-1">
                       {images.map((img, i) => (
                         <button key={i} onClick={() => setActiveImage(i)} className={`flex-shrink-0 w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-lg border-2 p-1.5 transition-all ${activeImage === i ? 'border-primary shadow-md scale-105' : 'border-transparent hover:border-border opacity-70 hover:opacity-100'}`}>
-                          <img src={img} className="w-full h-full object-contain" alt={`Vue ${i + 1}`} />
+                          <img src={img} className="w-full h-full object-contain" alt={t("product.viewN", { n: i + 1 })} />
                         </button>
                       ))}
                     </div>
@@ -264,7 +316,7 @@ export default function ProductDetails() {
               <div className="p-5 sm:p-8 lg:p-12 flex flex-col">
                 <div className="flex justify-between items-start mb-2 sm:mb-4">
                   <Badge className="bg-secondary text-primary font-bold text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 border-none hover:bg-secondary">{product.oilType}</Badge>
-                  {!product.inStock && <Badge variant="destructive" className="text-xs">Rupture de Stock</Badge>}
+                  {!product.inStock && <Badge variant="destructive" className="text-xs">{t("product.outOfStock")}</Badge>}
                 </div>
                 <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl text-primary mb-1 sm:mb-2 leading-tight">{product.name}</h1>
                 <p className="text-base sm:text-xl text-muted-foreground font-bold uppercase tracking-wider mb-4 sm:mb-6">{product.brandName}</p>
@@ -279,12 +331,12 @@ export default function ProductDetails() {
                         type="button"
                         onClick={() => {
                           setPdfViewerUrl(product.securitySheetUrl!);
-                          setPdfViewerTitle("Fiche de Sécurité");
+                          setPdfViewerTitle(t("product.safetySheet"));
                         }}
                         className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border-2 border-red-200 rounded-xl text-red-700 font-semibold text-sm hover:bg-red-100 hover:border-red-300 transition-all hover:shadow-md"
                       >
                         <ShieldCheck className="w-5 h-5" />
-                        Fiche de Sécurité
+                        {t("product.safetySheet")}
                       </button>
                     )}
                     {product.technicalSheetUrl && (
@@ -292,29 +344,29 @@ export default function ProductDetails() {
                         type="button"
                         onClick={() => {
                           setPdfViewerUrl(product.technicalSheetUrl!);
-                          setPdfViewerTitle("Fiche Technique");
+                          setPdfViewerTitle(t("product.technicalSheet"));
                         }}
                         className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border-2 border-blue-200 rounded-xl text-blue-700 font-semibold text-sm hover:bg-blue-100 hover:border-blue-300 transition-all hover:shadow-md"
                       >
                         <FileText className="w-5 h-5" />
-                        Fiche Technique
+                        {t("product.technicalSheet")}
                       </button>
                     )}
                   </div>
                 )}
                 <div className="grid grid-cols-3 gap-2 sm:gap-y-4 sm:gap-x-8 mb-5 sm:mb-8 bg-gray-50 p-3 sm:p-6 rounded-xl border">
-                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Volume</span><strong className="text-primary text-xs sm:text-lg">{product.volume}</strong></div>
-                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Viscosité</span><strong className="text-primary text-xs sm:text-lg">{product.viscosityGrade || 'N/A'}</strong></div>
-                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">Norme API</span><strong className="text-primary text-xs sm:text-lg">{product.apiStandard || 'N/A'}</strong></div>
+                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">{t("product.volume")}</span><strong className="text-primary text-xs sm:text-lg">{product.volume}</strong></div>
+                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">{t("product.viscosity")}</span><strong className="text-primary text-xs sm:text-lg">{product.viscosityGrade || t("product.na")}</strong></div>
+                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">{t("product.apiNorm")}</span><strong className="text-primary text-xs sm:text-lg">{product.apiStandard || t("product.na")}</strong></div>
                 </div>
                 <div className="space-y-2 sm:space-y-4 pt-3 sm:pt-4 border-t">
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary"><ShieldCheck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> Garantie 100% Authentique</div>
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary"><Truck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> Livraison dans les 58 Wilayas</div>
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary"><ShieldCheck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> {t("product.authentic")}</div>
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary"><Truck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> {t("delivery.coverageProduct")}</div>
                 </div>
                 {product.inStock && (
                   <Button onClick={scrollToOrder} size="lg" className="w-full mt-6 h-14 text-lg font-display tracking-wider bg-secondary text-primary hover:bg-secondary/90 sm:hidden">
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    Commander — {product.price.toLocaleString()} DA
+                    {t("product.orderCta", { price: product.price.toLocaleString() })}
                   </Button>
                 )}
               </div>
@@ -326,10 +378,10 @@ export default function ProductDetails() {
             <div className="bg-white rounded-2xl shadow-xl border-t-8 border-t-primary overflow-hidden" id="order-form">
               <div className="p-5 sm:p-8 lg:p-12 max-w-4xl mx-auto">
                 <div className="text-center mb-6 sm:mb-10">
-                  <h2 className="font-display text-2xl sm:text-4xl text-primary mb-2">Commander Maintenant</h2>
+                  <h2 className="font-display text-2xl sm:text-4xl text-primary mb-2">{t("product.orderNow")}</h2>
                   <p className="text-sm sm:text-xl text-muted-foreground">
-                    <span className="text-secondary font-bold bg-[#001D3D] px-2 sm:px-3 py-1 rounded text-xs sm:text-base">PAIEMENT À LA LIVRAISON</span>
-                    <span className="block sm:inline mt-1 sm:mt-0 sm:ml-2">Payez uniquement à la réception.</span>
+                    <span className="text-secondary font-bold bg-[#001D3D] px-2 sm:px-3 py-1 rounded text-xs sm:text-base">{t("product.codBadge")}</span>
+                    <span className="block sm:inline mt-1 sm:mt-0 sm:ml-2">{t("product.codHint")}</span>
                   </p>
                 </div>
 
@@ -338,14 +390,14 @@ export default function ProductDetails() {
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
                       <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
                     </div>
-                    <h3 className="font-display text-2xl sm:text-3xl text-green-700 mb-2">Commande Reçue !</h3>
-                    <p className="text-sm sm:text-lg text-green-800 mb-6 sm:mb-8">Merci, {form.getValues('customerName')}. Nous vous appellerons bientôt pour confirmer votre livraison.</p>
+                    <h3 className="font-display text-2xl sm:text-3xl text-green-700 mb-2">{t("product.orderReceived")}</h3>
+                    <p className="text-sm sm:text-lg text-green-800 mb-6 sm:mb-8">{t("product.thankYou", { name: form.getValues("customerName") })}</p>
                     <div className="bg-white p-4 sm:p-6 rounded-lg border text-left max-w-sm mx-auto text-sm sm:text-base">
-                      <h4 className="font-bold border-b pb-2 mb-3 sm:mb-4 text-primary">Résumé de la Commande</h4>
-                      <div className="flex justify-between mb-2"><span>Produit</span><span className="font-bold">{product.name}</span></div>
-                      <div className="flex justify-between mb-2"><span>Quantité</span><span className="font-bold">{form.getValues('quantity')}</span></div>
-                      <div className="flex justify-between mb-2"><span>Livraison</span><span className="font-bold">{deliveryType === "domicile" ? "À Domicile" : "Stop Desk"}</span></div>
-                      <div className="flex justify-between font-bold text-base sm:text-lg pt-2 border-t mt-3 sm:mt-4 text-primary"><span>Total à Payer</span><span>{orderTotal.toLocaleString()} DA</span></div>
+                      <h4 className="font-bold border-b pb-2 mb-3 sm:mb-4 text-primary">{t("product.orderSummary")}</h4>
+                      <div className="flex justify-between mb-2"><span>{t("product.productLabel")}</span><span className="font-bold">{product.name}</span></div>
+                      <div className="flex justify-between mb-2"><span>{t("product.qtyLabel")}</span><span className="font-bold">{form.getValues('quantity')}</span></div>
+                      <div className="flex justify-between mb-2"><span>{t("product.deliveryLabel")}</span><span className="font-bold">{deliveryType === "domicile" ? t("product.homeDelivery") : t("product.stopDesk")}</span></div>
+                      <div className="flex justify-between font-bold text-base sm:text-lg pt-2 border-t mt-3 sm:mt-4 text-primary"><span>{t("product.totalPay")}</span><span>{orderTotal.toLocaleString()} DA</span></div>
                     </div>
                   </div>
                 ) : (
@@ -354,15 +406,15 @@ export default function ProductDetails() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                         <FormField control={form.control} name="customerName" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">Nom Complet</FormLabel>
-                            <FormControl><Input className="h-12 sm:h-14 text-base sm:text-lg" placeholder="Mohamed..." {...field} /></FormControl>
+                            <FormLabel className="text-sm">{t("product.fullName")}</FormLabel>
+                            <FormControl><Input className="h-12 sm:h-14 text-base sm:text-lg" placeholder={t("product.namePlaceholder")} {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}/>
                         <FormField control={form.control} name="phone" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">Numéro de Téléphone</FormLabel>
-                            <FormControl><Input type="tel" className="h-12 sm:h-14 text-base sm:text-lg" placeholder="0555..." {...field} /></FormControl>
+                            <FormLabel className="text-sm">{t("product.phone")}</FormLabel>
+                            <FormControl><Input type="tel" className="h-12 sm:h-14 text-base sm:text-lg" placeholder={t("product.phonePh")} {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}/>
@@ -371,9 +423,9 @@ export default function ProductDetails() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                         <FormField control={form.control} name="wilayaCode" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">Wilaya</FormLabel>
+                            <FormLabel className="text-sm">{t("product.wilaya")}</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl><SelectTrigger className="h-12 sm:h-14 text-base sm:text-lg"><SelectValue placeholder="Sélectionner la Wilaya" /></SelectTrigger></FormControl>
+                              <FormControl><SelectTrigger className="h-12 sm:h-14 text-base sm:text-lg"><SelectValue placeholder={t("product.wilayaPh")} /></SelectTrigger></FormControl>
                               <SelectContent className="max-h-[300px]">
                                 {ALGERIA_WILAYAS.map(w => {
                                   const code = w.substring(0, 2);
@@ -386,7 +438,7 @@ export default function ProductDetails() {
                         )}/>
                         <FormField control={form.control} name="quantity" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm">Quantité</FormLabel>
+                            <FormLabel className="text-sm">{t("product.quantity")}</FormLabel>
                             <FormControl><Input type="number" min={1} className="h-12 sm:h-14 text-base sm:text-lg" {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
@@ -395,7 +447,7 @@ export default function ProductDetails() {
 
                       {/* ── Delivery Type Toggle ── */}
                       <div>
-                        <label className="text-sm font-medium mb-3 block">Type de Livraison</label>
+                        <label className="text-sm font-medium mb-3 block">{t("product.deliveryType")}</label>
                         <div className="grid grid-cols-2 gap-3">
                           <button
                             type="button"
@@ -412,8 +464,8 @@ export default function ProductDetails() {
                               </div>
                             )}
                             <Building2 className={`w-7 h-7 sm:w-8 sm:h-8 ${deliveryType === "stopdesk" ? "text-primary" : "text-gray-400"}`} />
-                            <span className={`font-bold text-sm sm:text-base ${deliveryType === "stopdesk" ? "text-primary" : "text-gray-600"}`}>Stop Desk</span>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">Retrait au bureau de livraison</span>
+                            <span className={`font-bold text-sm sm:text-base ${deliveryType === "stopdesk" ? "text-primary" : "text-gray-600"}`}>{t("product.stopDesk")}</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">{t("product.stopDeskHint")}</span>
                             {selectedWilayaCode && deliveryData && (
                               <span className={`font-display font-bold text-base sm:text-lg ${deliveryType === "stopdesk" ? "text-secondary" : "text-gray-500"}`}>
                                 {deliveryData.price.toLocaleString()} DA
@@ -436,8 +488,8 @@ export default function ProductDetails() {
                               </div>
                             )}
                             <Home className={`w-7 h-7 sm:w-8 sm:h-8 ${deliveryType === "domicile" ? "text-primary" : "text-gray-400"}`} />
-                            <span className={`font-bold text-sm sm:text-base ${deliveryType === "domicile" ? "text-primary" : "text-gray-600"}`}>À Domicile</span>
-                            <span className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">Livraison à votre porte</span>
+                            <span className={`font-bold text-sm sm:text-base ${deliveryType === "domicile" ? "text-primary" : "text-gray-600"}`}>{t("product.homeDelivery")}</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">{t("product.homeDeliveryHint")}</span>
                             {selectedWilayaCode && deliveryData && (
                               <span className={`font-display font-bold text-base sm:text-lg ${deliveryType === "domicile" ? "text-secondary" : "text-gray-500"}`}>
                                 {deliveryData.domicilePrice.toLocaleString()} DA
@@ -450,12 +502,12 @@ export default function ProductDetails() {
                       <FormField control={form.control} name="address" render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-sm">
-                            {deliveryType === "domicile" ? "Adresse de Livraison Complète" : "Point de Relais / Adresse"}
+                            {deliveryType === "domicile" ? t("product.addrHome") : t("product.addrDesk")}
                           </FormLabel>
                           <FormControl>
                             <Textarea
                               className="text-base sm:text-lg min-h-[80px] sm:min-h-[100px]"
-                              placeholder={deliveryType === "domicile" ? "Rue, Quartier, Ville..." : "Bureau de livraison le plus proche ou votre adresse..."}
+                              placeholder={deliveryType === "domicile" ? t("product.addrPhHome") : t("product.addrPhDesk")}
                               {...field}
                             />
                           </FormControl>
@@ -468,26 +520,26 @@ export default function ProductDetails() {
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
                           <div className="w-full sm:w-auto space-y-1.5 sm:space-y-2">
                             <div className="flex justify-between sm:justify-start sm:gap-8 text-white/70 text-sm sm:text-base">
-                              <span>Produit :</span> <span className="text-white font-bold">{productTotal.toLocaleString()} DA</span>
+                              <span>{t("product.productTotal")}</span> <span className="text-white font-bold">{productTotal.toLocaleString()} DA</span>
                             </div>
                             {selectedWilayaCode && (
                               <div className="flex justify-between sm:justify-start sm:gap-8 text-white/70 text-sm sm:text-base">
-                                <span>Livraison ({deliveryType === "domicile" ? "Domicile" : "Stop Desk"}) :</span>
-                                <span className="text-secondary font-bold">{deliveryCost === 0 ? "Gratuit" : `${deliveryCost.toLocaleString()} DA`}</span>
+                                <span>{t("product.deliveryFee", { type: deliveryType === "domicile" ? t("product.domicile") : t("product.stopDesk") })}</span>
+                                <span className="text-secondary font-bold">{deliveryCost === 0 ? t("product.free") : `${deliveryCost.toLocaleString()} DA`}</span>
                               </div>
                             )}
                           </div>
                           <div className="text-center sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/20 pt-3 sm:pt-0">
-                            <span className="block text-xs sm:text-sm text-secondary font-bold tracking-widest uppercase mb-1">Total à Payer</span>
+                            <span className="block text-xs sm:text-sm text-secondary font-bold tracking-widest uppercase mb-1">{t("product.totalPay")}</span>
                             <span className="font-display text-3xl sm:text-5xl">{orderTotal.toLocaleString()} DA</span>
                           </div>
                         </div>
                       </div>
 
                       <Button type="submit" size="lg" disabled={createOrder.isPending} className="w-full h-14 sm:h-16 text-base sm:text-xl font-display tracking-wider bg-secondary text-primary hover:bg-secondary/90 hover-elevate">
-                        {createOrder.isPending ? "Traitement..." : "Confirmer la Commande"}
+                        {createOrder.isPending ? t("product.processing") : t("product.confirmOrder")}
                       </Button>
-                      <p className="text-center text-xs text-muted-foreground -mt-2">Paiement à la livraison — Aucun prépaiement requis</p>
+                      <p className="text-center text-xs text-muted-foreground -mt-2">{t("product.codNote")}</p>
                     </form>
                   </Form>
                 )}
@@ -496,8 +548,8 @@ export default function ProductDetails() {
           ) : (
             <div className="bg-white rounded-2xl shadow-xl border p-8 sm:p-12 text-center">
               <Package className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <h2 className="font-display text-2xl sm:text-3xl text-primary mb-2">Rupture de Stock</h2>
-              <p className="text-sm sm:text-lg text-muted-foreground">Ce produit est actuellement indisponible. Veuillez réessayer plus tard.</p>
+              <h2 className="font-display text-2xl sm:text-3xl text-primary mb-2">{t("product.outTitle")}</h2>
+              <p className="text-sm sm:text-lg text-muted-foreground">{t("product.outDesc")}</p>
             </div>
           )}
         </div>
@@ -508,7 +560,7 @@ export default function ProductDetails() {
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-primary shadow-[0_-4px_20px_rgba(0,0,0,0.15)] p-3 sm:hidden">
           <Button onClick={scrollToOrder} size="lg" className="w-full h-12 text-base font-display tracking-wider bg-secondary text-primary hover:bg-secondary/90">
             <ShoppingCart className="w-5 h-5 mr-2" />
-            Commander — {product.price.toLocaleString()} DA
+            {t("product.orderCta", { price: product.price.toLocaleString() })}
           </Button>
         </div>
       )}

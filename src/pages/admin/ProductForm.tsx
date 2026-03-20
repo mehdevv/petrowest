@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useRoute } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,22 +27,28 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "") || "product";
 }
 
-const productSchema = z.object({
-  name: z.string().min(2, "Le nom est requis"),
-  brandId: z.coerce.number().min(1, "La marque est requise"),
-  categoryId: z.coerce.number().optional().nullable(),
-  oilType: z.string().min(1, "Le type d'huile est requis"),
-  viscosityGrade: z.string().optional(),
-  volume: z.string().min(1, "Le volume est requis"),
-  price: z.coerce.number().min(0, "Le prix doit être >= 0"),
-  description: z.string().min(5, "La description est requise"),
-  apiStandard: z.string().optional(),
-  images: z.array(z.string()).optional(),
-  inStock: z.boolean().default(true),
-  featured: z.boolean().default(false)
-});
+function buildProductSchema(t: (k: string) => string) {
+  return z.object({
+    name: z.string().min(2, t("admin.productForm.errors.name")),
+    brandId: z.coerce.number().min(1, t("admin.productForm.errors.brand")),
+    categoryId: z.coerce.number().optional().nullable(),
+    oilType: z.string().min(1, t("admin.productForm.errors.oilType")),
+    viscosityGrade: z.string().optional(),
+    volume: z.string().min(1, t("admin.productForm.errors.volume")),
+    price: z.coerce.number().min(0, t("admin.productForm.errors.price")),
+    description: z.string().min(5, t("admin.productForm.errors.description")),
+    apiStandard: z.string().optional(),
+    images: z.array(z.string()).optional(),
+    metaPixelId: z.string().optional(),
+    inStock: z.boolean().default(true),
+    featured: z.boolean().default(false),
+  });
+}
 
 export default function ProductForm() {
+  const { t } = useTranslation();
+  const productSchema = useMemo(() => buildProductSchema(t), [t]);
+  type ProductFormValues = z.infer<ReturnType<typeof buildProductSchema>>;
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/admin/products/:id/edit");
   const isEdit = !!params?.id;
@@ -70,7 +77,7 @@ export default function ProductForm() {
   const securityInputRef = useRef<HTMLInputElement>(null);
   const technicalInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<z.infer<typeof productSchema>>({
+  const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
@@ -83,6 +90,7 @@ export default function ProductForm() {
       description: "",
       apiStandard: "",
       images: [],
+      metaPixelId: "",
       inStock: true,
       featured: false
     }
@@ -105,6 +113,7 @@ export default function ProductForm() {
         description: existingProduct.description,
         apiStandard: existingProduct.apiStandard || "",
         images: existingImages,
+        metaPixelId: existingProduct.metaPixelId || "",
         inStock: existingProduct.inStock,
         featured: existingProduct.featured
       });
@@ -119,11 +128,11 @@ export default function ProductForm() {
   const handleImageUpload = async (file: File, replaceIndex?: number) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Veuillez sélectionner une image valide.", variant: "destructive" });
+      toast({ title: t("admin.productForm.toastPickImage"), variant: "destructive" });
       return;
     }
     if (file.size > 32 * 1024 * 1024) {
-      toast({ title: "L'image ne doit pas dépasser 32 Mo.", variant: "destructive" });
+      toast({ title: t("admin.productForm.toastImage32"), variant: "destructive" });
       return;
     }
 
@@ -136,13 +145,13 @@ export default function ProductForm() {
           next[replaceIndex] = result.url;
           return next;
         });
-        toast({ title: "Image remplacée avec succès." });
+        toast({ title: t("admin.productForm.toastImageReplaced") });
       } else {
         setImages(prev => [...prev, result.url]);
-        toast({ title: "Image ajoutée avec succès." });
+        toast({ title: t("admin.productForm.toastImageAddedOk") });
       }
     } catch (error: any) {
-      toast({ title: error.message || "Échec du téléchargement.", variant: "destructive" });
+      toast({ title: error.message || t("admin.categories.toastUploadErr"), variant: "destructive" });
     } finally {
       setUploadingIndex(null);
       setPendingSlot(null);
@@ -186,9 +195,9 @@ export default function ProductForm() {
     try {
       const url = await uploadProductPdf(file, slug, type);
       setter(url);
-      toast({ title: type === "security" ? "Fiche de sécurité ajoutée." : "Fiche technique ajoutée." });
+      toast({ title: type === "security" ? t("admin.productForm.toastSecurityAdded") : t("admin.productForm.toastTechnicalAdded") });
     } catch (error: any) {
-      toast({ title: error.message || "Échec du téléchargement.", variant: "destructive" });
+      toast({ title: error.message || t("admin.productForm.toastPdfErr"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -198,7 +207,7 @@ export default function ProductForm() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-        toast({ title: "Produit créé avec succès." });
+        toast({ title: t("admin.productForm.toastCreateOk") });
         setLocation("/admin/products");
       }
     }
@@ -208,16 +217,17 @@ export default function ProductForm() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-        toast({ title: "Produit mis à jour avec succès." });
+        toast({ title: t("admin.productForm.toastUpdateOk") });
         setLocation("/admin/products");
       }
     }
   });
 
-  const onSubmit = (data: z.infer<typeof productSchema>) => {
+  const onSubmit = (data: ProductFormValues) => {
     const payload = {
       ...data,
       images,
+      metaPixelId: data.metaPixelId?.trim() ? data.metaPixelId.trim() : null,
       securitySheetUrl: securitySheetUrl || null,
       technicalSheetUrl: technicalSheetUrl || null,
     };
@@ -231,7 +241,7 @@ export default function ProductForm() {
   const isPending = createMutation.isPending || updateMutation.isPending;
   const isUploading = uploadingIndex !== null || uploadingSecurity || uploadingTechnical;
 
-  if (isEdit && productLoading) return <AdminLayout>Chargement...</AdminLayout>;
+  if (isEdit && productLoading) return <AdminLayout>{t("admin.common.loading")}</AdminLayout>;
 
   return (
     <AdminLayout>
@@ -240,8 +250,8 @@ export default function ProductForm() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="font-display text-4xl text-primary mb-1">{isEdit ? "Modifier le Produit" : "Ajouter un Nouveau Produit"}</h1>
-          <p className="text-muted-foreground">Remplissez les détails ci-dessous.</p>
+          <h1 className="font-display text-4xl text-primary mb-1">{isEdit ? t("admin.productForm.editTitle") : t("admin.productForm.newTitle")}</h1>
+          <p className="text-muted-foreground">{isEdit ? t("admin.productForm.subtitleEdit") : t("admin.productForm.subtitleForm")}</p>
         </div>
       </div>
 
@@ -251,11 +261,11 @@ export default function ProductForm() {
             
             {/* Basic Info */}
             <div className="space-y-4">
-              <h3 className="font-display text-xl border-b pb-2 text-primary">Informations de Base</h3>
+              <h3 className="font-display text-xl border-b pb-2 text-primary">{t("admin.productForm.basicInfo")}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Nom du Produit</FormLabel>
+                    <FormLabel>{t("admin.productForm.name")}</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -263,9 +273,9 @@ export default function ProductForm() {
                 
                 <FormField control={form.control} name="brandId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Marque</FormLabel>
+                    <FormLabel>{t("admin.productForm.brand")}</FormLabel>
                     <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? field.value.toString() : ""}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Sélectionner la Marque" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder={t("admin.productForm.selectBrand")} /></SelectTrigger></FormControl>
                       <SelectContent>{brands?.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}</SelectContent>
                     </Select>
                     <FormMessage />
@@ -274,9 +284,9 @@ export default function ProductForm() {
 
                 <FormField control={form.control} name="categoryId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Catégorie (Optionnelle)</FormLabel>
+                    <FormLabel>{t("admin.productForm.categoryOptional")}</FormLabel>
                     <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? field.value.toString() : ""}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Sélectionner la Catégorie" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder={t("admin.productForm.selectCategory")} /></SelectTrigger></FormControl>
                       <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
                     </Select>
                     <FormMessage />
@@ -287,15 +297,19 @@ export default function ProductForm() {
 
             {/* Specifications */}
             <div className="space-y-4">
-              <h3 className="font-display text-xl border-b pb-2 text-primary">Spécifications et Tarification</h3>
+              <h3 className="font-display text-xl border-b pb-2 text-primary">{t("admin.productForm.sectionSpecs")}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="oilType" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type d'Huile</FormLabel>
+                    <FormLabel>{t("admin.productForm.oilType")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Sélectionner le Type" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder={t("admin.productForm.selectOilType")} /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {oilTypes?.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                        {oilTypes?.map((ot) => (
+                          <SelectItem key={ot.id} value={ot.name}>
+                            {ot.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -304,7 +318,7 @@ export default function ProductForm() {
 
                 <FormField control={form.control} name="price" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prix (DA)</FormLabel>
+                    <FormLabel>{t("admin.productForm.price")}</FormLabel>
                     <FormControl><Input type="number" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -312,7 +326,7 @@ export default function ProductForm() {
 
                 <FormField control={form.control} name="volume" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Volume (ex : 1L, 4L, 5L)</FormLabel>
+                    <FormLabel>{t("admin.productForm.volumeLabel")}</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -320,7 +334,7 @@ export default function ProductForm() {
 
                 <FormField control={form.control} name="viscosityGrade" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Grade de Viscosité (ex : 5W-30)</FormLabel>
+                    <FormLabel>{t("admin.productForm.viscosityLabel")}</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -328,15 +342,15 @@ export default function ProductForm() {
 
                 <FormField control={form.control} name="apiStandard" render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Normes API / ACEA</FormLabel>
-                    <FormControl><Input {...field} placeholder="API SN, ACEA C3..." /></FormControl>
+                    <FormLabel>{t("admin.productForm.apiLabel")}</FormLabel>
+                    <FormControl><Input {...field} placeholder={`${t("admin.productForm.apiPh")}…`} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}/>
                 
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t("admin.productForm.description")}</FormLabel>
                     <FormControl><Textarea className="min-h-[120px]" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,9 +361,9 @@ export default function ProductForm() {
             {/* ── Multi-Image Gallery Upload ─────────────────────── */}
             <div className="space-y-4">
               <h3 className="font-display text-xl border-b pb-2 text-primary">
-                Images du Produit
-                <span className="text-sm font-sans font-normal text-muted-foreground ml-3">
-                  {images.length} / 8 — La première image est l'image principale
+                {t("admin.productForm.imagesHeading")}
+                <span className="text-sm font-sans font-normal text-muted-foreground ms-3">
+                  {t("admin.productForm.imagesCounter", { count: images.length })}
                 </span>
               </h3>
 
@@ -363,7 +377,7 @@ export default function ProductForm() {
                     {/* Main badge */}
                     {idx === 0 && (
                       <span className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        Principale
+                        {t("admin.productForm.mainBadge")}
                       </span>
                     )}
 
@@ -373,7 +387,7 @@ export default function ProductForm() {
                         {idx > 0 && (
                           <button
                             type="button"
-                            title="Déplacer vers la gauche"
+                            title={t("admin.productForm.moveLeft")}
                             onClick={() => moveImage(idx, idx - 1)}
                             className="bg-white/90 text-primary rounded-full p-1.5 hover:bg-white transition text-xs font-bold"
                           >
@@ -383,7 +397,7 @@ export default function ProductForm() {
                         {idx < images.length - 1 && (
                           <button
                             type="button"
-                            title="Déplacer vers la droite"
+                            title={t("admin.productForm.moveRight")}
                             onClick={() => moveImage(idx, idx + 1)}
                             className="bg-white/90 text-primary rounded-full p-1.5 hover:bg-white transition text-xs font-bold"
                           >
@@ -393,7 +407,7 @@ export default function ProductForm() {
                       </div>
                       <button
                         type="button"
-                        title="Supprimer l'image"
+                        title={t("admin.productForm.removeImage")}
                         onClick={() => removeImage(idx)}
                         className="bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition"
                       >
@@ -409,7 +423,7 @@ export default function ProductForm() {
                     {isUploading && uploadingIndex === -1 ? (
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        <span className="text-xs">Téléchargement...</span>
+                        <span className="text-xs">{t("admin.productForm.uploading")}</span>
                       </div>
                     ) : (
                       <>
@@ -418,7 +432,7 @@ export default function ProductForm() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            title="Choisir un fichier"
+                            title={t("admin.productForm.chooseFile")}
                             disabled={isUploading}
                             onClick={() => { setPendingSlot("file"); fileInputRef.current?.click(); }}
                             className="bg-primary text-white rounded-full p-2 hover:bg-primary/90 transition disabled:opacity-50"
@@ -427,7 +441,7 @@ export default function ProductForm() {
                           </button>
                           <button
                             type="button"
-                            title="Prendre une photo"
+                            title={t("admin.productForm.takePhoto")}
                             disabled={isUploading}
                             onClick={() => { setPendingSlot("camera"); cameraInputRef.current?.click(); }}
                             className="bg-secondary text-primary rounded-full p-2 hover:bg-secondary/90 transition disabled:opacity-50"
@@ -445,19 +459,14 @@ export default function ProductForm() {
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
 
-              <p className="text-xs text-muted-foreground">
-                Maximum 8 images. Utilisez ← → pour réordonner. La première image est l'image principale affichée dans la boutique.
-                Formats acceptés : JPG, PNG, GIF, WebP. Taille max : 32 Mo.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("admin.productForm.imagesHelp")}</p>
             </div>
 
             {/* ── PDF Sheets Upload ─────────────────────── */}
             <div className="space-y-4">
               <h3 className="font-display text-xl border-b pb-2 text-primary">
-                Fiches Produit (PDF)
-                <span className="text-sm font-sans font-normal text-muted-foreground ml-3">
-                  Fiche de sécurité et fiche technique — Max 10 Mo chacune
-                </span>
+                {t("admin.productForm.pdfBlockTitle")}
+                <span className="text-sm font-sans font-normal text-muted-foreground ms-3">{t("admin.productForm.pdfBlockSub")}</span>
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -465,20 +474,22 @@ export default function ProductForm() {
                 <div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
                   <div className="flex items-center gap-2 text-primary font-semibold">
                     <ShieldCheck className="w-5 h-5 text-red-500" />
-                    Fiche de Sécurité
+                    {t("admin.productForm.securityHeading")}
                   </div>
                   {securitySheetUrl ? (
                     <div className="flex items-center gap-3 bg-white rounded-lg border p-3">
                       <FileText className="w-8 h-8 text-red-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-primary truncate">Fiche de sécurité.pdf</p>
-                        <a href={securitySheetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Voir le fichier</a>
+                        <p className="text-sm font-medium text-primary truncate">{t("admin.productForm.fileSecurity")}</p>
+                        <a href={securitySheetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                          {t("admin.productForm.viewFile")}
+                        </a>
                       </div>
                       <button
                         type="button"
                         onClick={() => setSecuritySheetUrl(null)}
                         className="text-red-500 hover:text-red-700 p-1"
-                        title="Supprimer"
+                        title={t("admin.productForm.removeShort")}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -496,7 +507,7 @@ export default function ProductForm() {
                         <Upload className="w-8 h-8 text-gray-400" />
                       )}
                       <span className="text-sm text-muted-foreground">
-                        {uploadingSecurity ? "Téléchargement..." : "Cliquez pour ajouter le PDF"}
+                        {uploadingSecurity ? t("admin.productForm.uploading") : t("admin.productForm.clickPdf")}
                       </span>
                     </button>
                   )}
@@ -517,20 +528,22 @@ export default function ProductForm() {
                 <div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
                   <div className="flex items-center gap-2 text-primary font-semibold">
                     <FileText className="w-5 h-5 text-blue-500" />
-                    Fiche Technique
+                    {t("admin.productForm.technicalHeading")}
                   </div>
                   {technicalSheetUrl ? (
                     <div className="flex items-center gap-3 bg-white rounded-lg border p-3">
                       <FileText className="w-8 h-8 text-blue-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-primary truncate">Fiche technique.pdf</p>
-                        <a href={technicalSheetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Voir le fichier</a>
+                        <p className="text-sm font-medium text-primary truncate">{t("admin.productForm.fileTechnical")}</p>
+                        <a href={technicalSheetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                          {t("admin.productForm.viewFile")}
+                        </a>
                       </div>
                       <button
                         type="button"
                         onClick={() => setTechnicalSheetUrl(null)}
                         className="text-red-500 hover:text-red-700 p-1"
-                        title="Supprimer"
+                        title={t("admin.productForm.removeShort")}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -548,7 +561,7 @@ export default function ProductForm() {
                         <Upload className="w-8 h-8 text-gray-400" />
                       )}
                       <span className="text-sm text-muted-foreground">
-                        {uploadingTechnical ? "Téléchargement..." : "Cliquez pour ajouter le PDF"}
+                        {uploadingTechnical ? t("admin.productForm.uploading") : t("admin.productForm.clickPdf")}
                       </span>
                     </button>
                   )}
@@ -566,20 +579,27 @@ export default function ProductForm() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Format accepté : PDF uniquement. Taille max : 10 Mo par fichier. Ces fiches seront consultables directement sur la page du produit.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("admin.productForm.pdfHelp")}</p>
             </div>
 
             {/* Settings */}
             <div className="space-y-4">
-              <h3 className="font-display text-xl border-b pb-2 text-primary">Paramètres</h3>
+              <h3 className="font-display text-xl border-b pb-2 text-primary">{t("admin.productForm.settingsHeading")}</h3>
               <div className="flex flex-col gap-6 bg-gray-50 p-6 rounded-lg border">
+                <FormField control={form.control} name="metaPixelId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("admin.productForm.metaPixelId")}</FormLabel>
+                    <FormControl><Input placeholder={t("admin.productForm.metaPixelIdPh")} {...field} value={field.value ?? ""} /></FormControl>
+                    <FormDescription>{t("admin.productForm.metaPixelIdHelp")}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}/>
+
                 <FormField control={form.control} name="inStock" render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between">
                     <div>
-                      <FormLabel className="text-base">En Stock</FormLabel>
-                      <FormDescription>Le produit est disponible à l'achat.</FormDescription>
+                      <FormLabel className="text-base">{t("admin.productForm.inStock")}</FormLabel>
+                      <FormDescription>{t("admin.productForm.inStockDesc")}</FormDescription>
                     </div>
                     <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   </FormItem>
@@ -588,8 +608,8 @@ export default function ProductForm() {
                 <FormField control={form.control} name="featured" render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between">
                     <div>
-                      <FormLabel className="text-base">Produit Vedette</FormLabel>
-                      <FormDescription>Afficher dans la section vedette de la page d'accueil.</FormDescription>
+                      <FormLabel className="text-base">{t("admin.productForm.featured")}</FormLabel>
+                      <FormDescription>{t("admin.productForm.featuredDesc")}</FormDescription>
                     </div>
                     <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   </FormItem>
@@ -599,10 +619,10 @@ export default function ProductForm() {
 
             <div className="flex gap-4 pt-4 border-t">
               <Button type="submit" size="lg" className="w-40 font-bold hover-elevate" disabled={isPending || isUploading}>
-                {isPending ? "Enregistrement..." : "Enregistrer"}
+                {isPending ? t("admin.productForm.savePending") : isEdit ? t("admin.productForm.submitEdit") : t("admin.productForm.submitNew")}
               </Button>
               <Button type="button" size="lg" variant="outline" onClick={() => setLocation("/admin/products")}>
-                Annuler
+                {t("admin.common.cancel")}
               </Button>
             </div>
           </form>

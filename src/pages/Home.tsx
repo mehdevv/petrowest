@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2 } from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -35,6 +36,7 @@ function brandLogoUrl(name: string, customUrl?: string | null) {
 }
 
 function VehicleFilter() {
+  const { t } = useTranslation();
   const [categoryId, setCategoryId] = useState<string>("");
   const [brandId, setBrandId] = useState<string>("");
   const [modelId, setModelId] = useState<string>("");
@@ -86,9 +88,9 @@ function VehicleFilter() {
   const selectedBrand = brands?.find(b => b.id.toString() === brandId);
 
   const defaultCategories = [
-    { id: "car", name: "Voiture" },
-    { id: "moto", name: "Moto" },
-    { id: "truck", name: "Camion" },
+    { id: "car", name: t("home.categories.car") },
+    { id: "moto", name: t("home.categories.moto") },
+    { id: "truck", name: t("home.categories.truck") },
   ];
   const displayCategories = categories?.length ? categories : defaultCategories;
 
@@ -101,7 +103,7 @@ function VehicleFilter() {
             {/* 1. Vehicle Type */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
-                1. Type de Véhicule
+                {t("home.vehicleType")}
               </label>
               <div className="flex h-11 rounded-md overflow-hidden border border-white/20">
                 {displayCategories.map((cat, i) => (
@@ -125,7 +127,7 @@ function VehicleFilter() {
             {/* 2. Brand with logo */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
-                2. Marque
+                {t("home.vehicleBrand")}
               </label>
               <Select 
                 disabled={!categoryId} 
@@ -133,7 +135,7 @@ function VehicleFilter() {
                 onValueChange={(val) => { setBrandId(val); resetFromBrand(); }}
               >
                 <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
-                  <SelectValue placeholder={brandsLoading ? "Chargement..." : "Sélectionner la Marque"} />
+                  <SelectValue placeholder={brandsLoading ? t("product.loading") : t("home.selectBrand")} />
                 </SelectTrigger>
                   <SelectContent>
                     {brands?.map(b => (
@@ -159,7 +161,7 @@ function VehicleFilter() {
             {/* 3. Model */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
-                3. Modèle
+                {t("home.vehicleModel")}
               </label>
               <Select 
                 disabled={!brandId} 
@@ -167,7 +169,7 @@ function VehicleFilter() {
                 onValueChange={(val) => { setModelId(val); resetFromModel(); }}
               >
                 <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
-                  <SelectValue placeholder={modelsLoading ? "Chargement..." : "Sélectionner le Modèle"} />
+                  <SelectValue placeholder={modelsLoading ? t("product.loading") : t("home.selectModel")} />
                 </SelectTrigger>
                 <SelectContent>
                   {models?.map(m => <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>)}
@@ -178,7 +180,7 @@ function VehicleFilter() {
             {/* 4. Engine / Version */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
-                4. Type de Moteur
+                {t("home.vehicleEngine")}
               </label>
               <Select 
                 disabled={!modelId} 
@@ -186,7 +188,7 @@ function VehicleFilter() {
                 onValueChange={(val) => { setVersionId(val); resetFromVersion(); }}
               >
                 <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
-                  <SelectValue placeholder={versionsLoading ? "Chargement..." : "Moteur"} />
+                  <SelectValue placeholder={versionsLoading ? t("product.loading") : t("home.enginePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {versions?.map(v => <SelectItem key={v.id} value={v.id.toString()}>{v.name}</SelectItem>)}
@@ -197,7 +199,7 @@ function VehicleFilter() {
             {/* 5. Year */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
-                5. Année
+                {t("home.vehicleYear")}
               </label>
               <Select 
                 disabled={!versionId} 
@@ -205,7 +207,7 @@ function VehicleFilter() {
                 onValueChange={(val) => { setYearId(val); setSearched(false); }}
               >
                 <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
-                  <SelectValue placeholder={yearsLoading ? "Chargement..." : "Année"} />
+                  <SelectValue placeholder={yearsLoading ? t("product.loading") : t("home.yearPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {years?.map(y => <SelectItem key={y.id} value={y.id.toString()}>{y.year}</SelectItem>)}
@@ -221,7 +223,7 @@ function VehicleFilter() {
           disabled={!yearId}
           className="w-full bg-secondary hover:bg-yellow-400 disabled:bg-secondary/50 disabled:cursor-not-allowed text-primary font-display text-2xl md:text-3xl tracking-wider py-4 flex items-center justify-center gap-3 transition-colors duration-200"
         >
-          TROUVER MON HUILE <ArrowRight className="w-6 h-6" strokeWidth={3} />
+          {t("home.findOil")} <ArrowRight className="w-6 h-6" strokeWidth={3} />
         </button>
       </div>
 
@@ -237,14 +239,16 @@ function VehicleFilter() {
           >
             {recommendLoading ? (
               <div className="h-28 flex items-center justify-center bg-[#001D3D]/80 backdrop-blur-xl rounded-xl border-2 border-secondary/40">
-                <span className="text-secondary animate-pulse font-display text-xl tracking-wider">Analyse des spécifications moteur...</span>
+                <span className="text-secondary animate-pulse font-display text-xl tracking-wider">{t("home.analyzing")}</span>
               </div>
             ) : recommendedProducts && recommendedProducts.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-1">
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                   <span className="text-white font-bold text-sm uppercase tracking-widest">
-                    {recommendedProducts.length} huile{recommendedProducts.length > 1 ? "s" : ""} recommandée{recommendedProducts.length > 1 ? "s" : ""}
+                    {recommendedProducts.length > 1
+                      ? t("home.recommendedOilsMany", { count: recommendedProducts.length })
+                      : t("home.recommendedOilsOne", { count: recommendedProducts.length })}
                   </span>
                 </div>
                 {recommendedProducts.map((product) => (
@@ -259,7 +263,7 @@ function VehicleFilter() {
                     <div className="flex-1 text-center sm:text-left">
                       <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
                         <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <span className="text-green-600 font-bold text-xs uppercase tracking-widest">Correspondance Parfaite</span>
+                        <span className="text-green-600 font-bold text-xs uppercase tracking-widest">{t("home.perfectMatch")}</span>
                       </div>
                       <h3 className="font-display text-3xl text-primary leading-none mb-2">{product.name}</h3>
                       <p className="text-muted-foreground text-sm mb-3">{product.description?.substring(0, 100)}...</p>
@@ -268,7 +272,7 @@ function VehicleFilter() {
                           {product.price?.toLocaleString()} <span className="text-lg text-muted-foreground">DA</span>
                         </span>
                         <Button asChild size="lg" variant="secondary" className="font-display text-xl tracking-wider w-full sm:w-auto h-12">
-                          <Link href={`/shop/${product.slug}`}>Acheter</Link>
+                          <Link href={`/shop/${product.slug}`}>{t("nav.buy")}</Link>
                         </Button>
                       </div>
                     </div>
@@ -277,7 +281,7 @@ function VehicleFilter() {
               </div>
             ) : (
               <div className="h-24 flex items-center justify-center bg-[#001D3D]/80 backdrop-blur-xl rounded-xl border border-white/20 text-white/80 font-medium">
-                Aucune correspondance trouvée. Contactez-nous pour une recommandation.
+                {t("home.noMatch")}
               </div>
             )}
           </motion.div>
@@ -288,16 +292,17 @@ function VehicleFilter() {
 }
 
 function B2BSection() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [form, setForm] = useState({ company: "", phone: "", email: "", message: "" });
   const createMessage = useCreateB2BMessage({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Message envoyé", description: "Nous reviendrons vers vous rapidement." });
+        toast({ title: t("home.toastOkTitle"), description: t("home.toastOkDesc") });
         setForm({ company: "", phone: "", email: "", message: "" });
       },
       onError: () => {
-        toast({ title: "Erreur", description: "Impossible d'envoyer votre message. Réessayez.", variant: "destructive" });
+        toast({ title: t("home.toastErrTitle"), description: t("home.toastErrDesc"), variant: "destructive" });
       },
     },
   });
@@ -314,23 +319,23 @@ function B2BSection() {
         <div className="flex flex-col items-center mb-16">
           <div className="flex items-center gap-3 mb-4">
             <Building2 className="w-10 h-10 text-secondary" />
-            <h2 className="font-display text-5xl text-primary">Contactez-Nous</h2>
+            <h2 className="font-display text-5xl text-primary">{t("home.b2bTitle")}</h2>
           </div>
           <div className="w-24 h-1.5 bg-secondary rounded-full mb-4"></div>
           <p className="text-muted-foreground text-lg text-center max-w-2xl">
-            Vous êtes un professionnel ? Contactez-nous pour des offres spéciales en gros et consultez notre fiche technique.
+            {t("home.b2bSubtitle")}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-stretch">
           {/* Left — Contact Form */}
           <div className="bg-white rounded-2xl shadow-xl border border-border p-8 lg:p-10 flex flex-col">
-            <h3 className="font-display text-3xl text-primary mb-6">Contactez-nous</h3>
+            <h3 className="font-display text-3xl text-primary mb-6">{t("home.b2bFormTitle")}</h3>
             <form onSubmit={handleSubmit} className="flex flex-col gap-5 flex-1">
               <div>
-                <label className="text-sm font-semibold text-primary mb-1.5 block">Nom de l'entreprise</label>
+                <label className="text-sm font-semibold text-primary mb-1.5 block">{t("home.companyName")}</label>
                 <Input
-                  placeholder="Ex: SARL MonEntreprise"
+                  placeholder={t("home.companyPlaceholder")}
                   value={form.company}
                   onChange={(e) => setForm(prev => ({ ...prev, company: e.target.value }))}
                   required
@@ -339,10 +344,10 @@ function B2BSection() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="text-sm font-semibold text-primary mb-1.5 block">Numéro de téléphone</label>
+                  <label className="text-sm font-semibold text-primary mb-1.5 block">{t("home.phoneLabel")}</label>
                   <Input
                     type="tel"
-                    placeholder="+213 XXX XXX XXX"
+                    placeholder={t("home.phonePlaceholder")}
                     value={form.phone}
                     onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
                     required
@@ -350,10 +355,10 @@ function B2BSection() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-primary mb-1.5 block">Adresse e-mail</label>
+                  <label className="text-sm font-semibold text-primary mb-1.5 block">{t("home.emailField")}</label>
                   <Input
                     type="email"
-                    placeholder="contact@entreprise.dz"
+                    placeholder={t("home.emailPlaceholder")}
                     value={form.email}
                     onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
                     required
@@ -362,9 +367,9 @@ function B2BSection() {
                 </div>
               </div>
               <div className="flex-1 flex flex-col">
-                <label className="text-sm font-semibold text-primary mb-1.5 block">Votre message</label>
+                <label className="text-sm font-semibold text-primary mb-1.5 block">{t("home.messageLabel")}</label>
                 <Textarea
-                  placeholder="Décrivez vos besoins en lubrifiants, quantités souhaitées..."
+                  placeholder={t("home.messagePlaceholder")}
                   value={form.message}
                   onChange={(e) => setForm(prev => ({ ...prev, message: e.target.value }))}
                   required
@@ -378,9 +383,9 @@ function B2BSection() {
                 className="font-display text-xl tracking-wider h-14 w-full"
               >
                 {createMessage.isPending ? (
-                  <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Envoi en cours...</>
+                  <><Loader2 className="w-5 h-5 animate-spin mr-2" /> {t("home.sending")}</>
                 ) : (
-                  <><Send className="w-5 h-5 mr-2" /> Envoyer le Message</>
+                  <><Send className="w-5 h-5 mr-2" /> {t("home.sendMessage")}</>
                 )}
               </Button>
             </form>
@@ -393,15 +398,15 @@ function B2BSection() {
                 <FileText className="w-6 h-6 text-secondary" />
               </div>
               <div>
-                <h3 className="font-display text-2xl text-primary leading-tight">Fiche Technique</h3>
-                <p className="text-sm text-muted-foreground">PETROWEST — Documentation produits</p>
+                <h3 className="font-display text-2xl text-primary leading-tight">{t("home.techSheetTitle")}</h3>
+                <p className="text-sm text-muted-foreground">{t("home.techSheetSubtitle")}</p>
               </div>
             </div>
             <div className="flex-1 rounded-xl overflow-hidden border border-border bg-gray-100 min-h-[400px]">
               <iframe
                 src={`${import.meta.env.BASE_URL}PETROWEST.pdf`}
                 className="w-full h-full min-h-[500px]"
-                title="Fiche Technique PETROWEST"
+                title={t("home.techSheetIframe")}
               />
             </div>
             <a
@@ -411,7 +416,7 @@ function B2BSection() {
               className="mt-4 inline-flex items-center justify-center gap-2 text-primary font-bold hover:text-secondary transition-colors text-sm"
             >
               <FileText className="w-4 h-4" />
-              Ouvrir la fiche technique en plein écran
+              {t("home.openPdf")}
             </a>
           </div>
         </div>
@@ -421,6 +426,8 @@ function B2BSection() {
 }
 
 export default function Home() {
+  const { t, i18n } = useTranslation();
+  const isArabic = (i18n.language || "").startsWith("ar");
   const { data: featuredData } = useListProducts({ featured: true, limit: 6 });
 
   return (
@@ -438,11 +445,23 @@ export default function Home() {
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 origin-top scale-[0.9]">
           <div className="text-center max-w-3xl mx-auto mb-8">
-            <h1 className="font-display text-5xl md:text-7xl lg:text-8xl text-white mb-6 drop-shadow-lg leading-[0.9]">
-              Trouvez l'<span className="text-secondary">Huile</span> Parfaite<br/>Pour Votre Véhicule
-            </h1>
-            <p className="text-xl md:text-2xl text-white/90 font-medium">
-              Sélectionnez votre véhicule et nous vous recommanderons le produit idéal pour protéger votre moteur.
+            {isArabic ? (
+              <h1 className="font-display text-[3.1rem] md:text-[5.3rem] lg:text-[6.4rem] text-white mb-10 md:mb-12 drop-shadow-lg leading-[1.02] tracking-normal">
+                <span>{t("home.heroTitle1")}</span>
+                <span className="text-secondary">{t("home.heroTitleOil")}</span>
+                <span>{t("home.heroTitle2")} {t("home.heroTitleBreak")}</span>
+              </h1>
+            ) : (
+              <h1 className="font-display text-5xl md:text-7xl lg:text-8xl text-white mb-6 drop-shadow-lg leading-[0.9]">
+                {t("home.heroTitle1")}
+                <span className="text-secondary">{t("home.heroTitleOil")}</span>
+                {t("home.heroTitle2")}
+                <br />
+                {t("home.heroTitleBreak")}
+              </h1>
+            )}
+            <p className={`text-xl md:text-2xl text-white/90 font-medium ${isArabic ? "mt-0" : ""}`}>
+              {t("home.heroSubtitle")}
             </p>
           </div>
           
@@ -455,10 +474,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { icon: Truck, title: "Livraison Rapide", text: "Livraison rapide et fiable vers les 58 wilayas d'Algérie." },
-              { icon: ShieldCheck, title: "100% Authentique", text: "Uniquement des huiles moteur certifiées de marques reconnues." },
-              { icon: Star, title: "Correspondance Expert", text: "Notre filtre véhicule vous trouve l'huile exacte qu'il vous faut." },
-              { icon: Tag, title: "Meilleurs Prix", text: "Des prix compétitifs dans toute l'Algérie." },
+              { icon: Truck, title: t("home.features.deliveryTitle"), text: t("home.features.deliveryText") },
+              { icon: ShieldCheck, title: t("home.features.authenticTitle"), text: t("home.features.authenticText") },
+              { icon: Star, title: t("home.features.matchTitle"), text: t("home.features.matchText") },
+              { icon: Tag, title: t("home.features.priceTitle"), text: t("home.features.priceText") },
             ].map((feature, i) => (
               <div key={i} className="bg-gray-50 rounded-2xl p-8 border border-border hover:border-secondary hover:-translate-y-2 transition-all duration-300 shadow-sm hover:shadow-xl group">
                 <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -476,7 +495,7 @@ export default function Home() {
       <section className="py-24 bg-[#EBEBEB]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center mb-16">
-            <h2 className="font-display text-5xl text-primary mb-4">Produits Vedettes</h2>
+            <h2 className="font-display text-5xl text-primary mb-4">{t("home.featured")}</h2>
             <div className="w-24 h-1.5 bg-secondary rounded-full"></div>
           </div>
           
@@ -488,7 +507,7 @@ export default function Home() {
           
           <div className="text-center">
             <Button asChild size="lg" variant="default" className="font-display text-xl px-12 h-14 tracking-wider">
-              <Link href="/shop">Voir Tous les Produits</Link>
+              <Link href="/shop">{t("home.seeAllProducts")}</Link>
             </Button>
           </div>
         </div>
@@ -498,7 +517,7 @@ export default function Home() {
       <section className="py-24 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center mb-20">
-            <h2 className="font-display text-5xl text-primary mb-4">Comment Ça Marche</h2>
+            <h2 className="font-display text-5xl text-primary mb-4">{t("home.howItWorks")}</h2>
             <div className="w-24 h-1.5 bg-secondary rounded-full"></div>
           </div>
           
@@ -508,9 +527,9 @@ export default function Home() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               {[
-                { num: "01", title: "Sélectionnez Votre Véhicule", text: "Utilisez le filtre intelligent pour choisir la marque, le modèle et le type de moteur." },
-                { num: "02", title: "Obtenez une Recommandation", text: "Notre système vous montre instantanément le produit idéal pour votre véhicule." },
-                { num: "03", title: "Commandez et Recevez", text: "Remplissez le formulaire de commande. Livraison contre remboursement vers les 58 wilayas." },
+                { num: "01", title: t("home.step1Title"), text: t("home.step1Text") },
+                { num: "02", title: t("home.step2Title"), text: t("home.step2Text") },
+                { num: "03", title: t("home.step3Title"), text: t("home.step3Text") },
               ].map((step, i) => (
                 <div key={i} className="relative z-10 flex flex-col items-center text-center">
                   <div className="w-24 h-24 rounded-full bg-secondary text-primary border-8 border-white flex items-center justify-center font-display text-4xl font-bold mb-8 shadow-xl">
@@ -531,21 +550,24 @@ export default function Home() {
       {/* Our Reference — seamless infinite scrolling logos */}
       <section className="py-16 bg-primary border-y-4 border-secondary overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 text-center mb-10">
-          <h3 className="font-display text-3xl text-secondary tracking-widest">Nos Références</h3>
+          <h3 className="font-display text-3xl text-secondary tracking-widest">{t("home.references")}</h3>
         </div>
         {/* 4 identical copies → animation moves -25% (= 1 copy width) per cycle.
             Using 4 copies guarantees the repeat is always off-screen on any monitor width. */}
         <div className="relative w-full overflow-hidden">
-          <div className="flex w-max animate-marquee hover:[animation-play-state:paused]" style={{ willChange: 'transform' }}>
+          <div
+            className={`flex w-max ${isArabic ? "flex-row-reverse animate-marquee-rtl" : "animate-marquee"} hover:[animation-play-state:paused]`}
+            style={{ willChange: "transform" }}
+          >
             {[11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
               11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
               11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,
               11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29].map((n, i) => (
               /* Fixed-width container ensures -25% is always exactly one copy wide */
-              <div key={i} className="flex-shrink-0 mx-4 w-32 h-28 bg-white rounded-lg p-2 flex items-center justify-center">
+              <div key={i} className="flex-shrink-0 mx-4 w-40 md:w-44 h-28 bg-white rounded-lg p-3 flex items-center justify-center">
                 <img
                   src={`${import.meta.env.BASE_URL}our referance/${n}.png`}
-                  alt={`Référence ${n}`}
+                  alt={t("home.referenceAlt", { n })}
                   className="max-h-full max-w-full object-contain"
                 />
               </div>
@@ -564,29 +586,29 @@ export default function Home() {
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              title="Emplacement PetroWest"
+              title={t("home.mapTitle")}
             />
           </div>
           <div className="p-12 lg:p-20 flex flex-col justify-center">
-            <h2 className="font-display text-5xl text-secondary mb-8">Visitez Notre Boutique</h2>
+            <h2 className="font-display text-5xl text-secondary mb-8">{t("home.visitTitle")}</h2>
             <div className="space-y-6 text-lg text-gray-300">
               <div>
-                <strong className="block text-white mb-2">Adresse :</strong>
+                <strong className="block text-white mb-2">{t("home.addressLabel")}</strong>
                 Cité Trouville rue n°01 N381<br/>Arzew – Oran, Algérie 31200
               </div>
               <div>
-                <strong className="block text-white mb-2">Appelez-nous :</strong>
+                <strong className="block text-white mb-2">{t("home.callLabel")}</strong>
                 <div className="space-y-1">
                   <a href="tel:+213797930554" className="block font-display text-3xl text-secondary hover:text-white transition-colors">+213 797 93 05 54</a>
                   <a href="tel:+213541035196" className="block font-display text-3xl text-secondary hover:text-white transition-colors">+213 541 03 51 96</a>
                 </div>
               </div>
               <div>
-                <strong className="block text-white mb-2">E-mail :</strong>
+                <strong className="block text-white mb-2">{t("home.emailLabel")}</strong>
                 <a href="mailto:contact@petrowest.dz" className="text-secondary hover:text-white transition-colors font-medium">contact@petrowest.dz</a>
               </div>
               <div>
-                <strong className="block text-white mb-3">Suivez-nous :</strong>
+                <strong className="block text-white mb-3">{t("home.followLabel")}</strong>
                 <div className="flex gap-3">
                   <a href="https://www.facebook.com/petrowest.dz" target="_blank" rel="noopener noreferrer" className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary transition-colors" title="Facebook">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>

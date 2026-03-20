@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import {
   useListBrands, useCreateBrand, useUpdateBrand, useDeleteBrand,
@@ -19,21 +20,23 @@ import { uploadToImgBB } from "@/lib/imgbb";
 type TabType = "brands" | "oilTypes" | "categories";
 
 export default function Catalogue() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>("brands");
 
-  const TABS = [
-    { id: "brands" as TabType, label: "Marques", icon: Tag },
-    { id: "oilTypes" as TabType, label: "Types d'Huile", icon: Droplets },
-    { id: "categories" as TabType, label: "Catégories", icon: FolderOpen },
-  ];
+  const TABS = useMemo(
+    () => [
+      { id: "brands" as TabType, label: t("admin.catalogue.tabBrands"), icon: Tag },
+      { id: "oilTypes" as TabType, label: t("admin.catalogue.tabOilTypes"), icon: Droplets },
+      { id: "categories" as TabType, label: t("admin.catalogue.tabCategories"), icon: FolderOpen },
+    ],
+    [t]
+  );
 
   return (
     <AdminLayout>
       <div className="mb-8">
-        <h1 className="font-display text-4xl text-primary mb-1">Catalogue</h1>
-        <p className="text-muted-foreground">
-          Gérer les marques, les types d'huile et les catégories de produits.
-        </p>
+        <h1 className="font-display text-4xl text-primary mb-1">{t("admin.catalogue.title")}</h1>
+        <p className="text-muted-foreground">{t("admin.catalogue.subtitle")}</p>
       </div>
 
       {/* Tabs */}
@@ -62,20 +65,11 @@ export default function Catalogue() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  SHARED: Simple CRUD table for name-only items
-// ═══════════════════════════════════════════════════════════
-
-interface CrudRow {
-  id: number;
-  name: string;
-  productCount?: number;
-}
-
-// ═══════════════════════════════════════════════════════════
 //  BRANDS TAB
 // ═══════════════════════════════════════════════════════════
 
 function BrandsTab() {
+  const { t } = useTranslation();
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
@@ -89,9 +83,9 @@ function BrandsTab() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
         setNewName("");
-        toast({ title: "Marque ajoutée avec succès." });
+        toast({ title: t("admin.catalogue.toastBrandAdd") });
       },
-      onError: () => toast({ title: "Erreur lors de l'ajout.", variant: "destructive" }),
+      onError: () => toast({ title: t("admin.catalogue.toastBrandErr"), variant: "destructive" }),
     },
   });
 
@@ -100,7 +94,7 @@ function BrandsTab() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
         setEditingId(null);
-        toast({ title: "Marque mise à jour." });
+        toast({ title: t("admin.catalogue.toastBrandUpd") });
       },
     },
   });
@@ -109,9 +103,9 @@ function BrandsTab() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/brands"] });
-        toast({ title: "Marque supprimée." });
+        toast({ title: t("admin.catalogue.toastBrandDel") });
       },
-      onError: () => toast({ title: "Impossible de supprimer une marque avec des produits.", variant: "destructive" }),
+      onError: () => toast({ title: t("admin.catalogueBrands.toastDelErr"), variant: "destructive" }),
     },
   });
 
@@ -130,28 +124,26 @@ function BrandsTab() {
     <div className="max-w-3xl">
       <form onSubmit={handleCreate} className="bg-white p-6 rounded-xl border mb-8 flex gap-4 items-end">
         <div className="flex-1">
-          <label className="text-sm font-bold text-primary mb-2 block uppercase tracking-wider">
-            Ajouter une Nouvelle Marque
-          </label>
-          <Input placeholder="ex : Castrol, Total, Shell..." value={newName} onChange={(e) => setNewName(e.target.value)} className="h-12" />
+          <label className="text-sm font-bold text-primary mb-2 block uppercase tracking-wider">{t("admin.catalogueBrands.addLabel")}</label>
+          <Input placeholder={t("admin.catalogueBrands.placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} className="h-12" />
         </div>
         <Button type="submit" className="h-12 px-6 hover-elevate" disabled={createMut.isPending || !newName.trim()}>
-          <Plus className="w-4 h-4 mr-2" /> Ajouter
+          <Plus className="w-4 h-4 me-2" /> {t("admin.catalogue.add")}
         </Button>
       </form>
 
       <div className="bg-white rounded-xl border overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+          <div className="p-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>
         ) : !brands?.length ? (
-          <div className="p-8 text-center text-muted-foreground">Aucune marque trouvée.</div>
+          <div className="p-8 text-center text-muted-foreground">{t("admin.catalogueBrands.empty")}</div>
         ) : (
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead>Nom de la Marque</TableHead>
-                <TableHead className="text-center w-32">Produits</TableHead>
-                <TableHead className="text-right w-28">Actions</TableHead>
+                <TableHead>{t("admin.catalogueBrands.colBrandName")}</TableHead>
+                <TableHead className="text-center w-32">{t("admin.catalogue.products")}</TableHead>
+                <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -209,6 +201,7 @@ function BrandsTab() {
 // ═══════════════════════════════════════════════════════════
 
 function OilTypesTab() {
+  const { t } = useTranslation();
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
@@ -222,9 +215,9 @@ function OilTypesTab() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/oil-types"] });
         setNewName("");
-        toast({ title: "Type d'huile ajouté avec succès." });
+        toast({ title: t("admin.catalogue.toastOilAdd") });
       },
-      onError: () => toast({ title: "Erreur lors de l'ajout.", variant: "destructive" }),
+      onError: () => toast({ title: t("admin.catalogue.toastOilErr"), variant: "destructive" }),
     },
   });
 
@@ -233,7 +226,7 @@ function OilTypesTab() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/oil-types"] });
         setEditingId(null);
-        toast({ title: "Type d'huile mis à jour." });
+        toast({ title: t("admin.catalogue.toastOilUpd") });
       },
     },
   });
@@ -242,9 +235,9 @@ function OilTypesTab() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/oil-types"] });
-        toast({ title: "Type d'huile supprimé." });
+        toast({ title: t("admin.catalogue.toastOilDel") });
       },
-      onError: () => toast({ title: "Impossible de supprimer ce type (utilisé par des produits).", variant: "destructive" }),
+      onError: () => toast({ title: t("admin.catalogueOil.toastDelErr"), variant: "destructive" }),
     },
   });
 
@@ -263,28 +256,26 @@ function OilTypesTab() {
     <div className="max-w-3xl">
       <form onSubmit={handleCreate} className="bg-white p-6 rounded-xl border mb-8 flex gap-4 items-end">
         <div className="flex-1">
-          <label className="text-sm font-bold text-primary mb-2 block uppercase tracking-wider">
-            Ajouter un Nouveau Type d'Huile
-          </label>
-          <Input placeholder="ex : Motor Oil, Gear Oil, Coolant..." value={newName} onChange={(e) => setNewName(e.target.value)} className="h-12" />
+          <label className="text-sm font-bold text-primary mb-2 block uppercase tracking-wider">{t("admin.catalogueOil.addLabel")}</label>
+          <Input placeholder={t("admin.catalogueOil.placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} className="h-12" />
         </div>
         <Button type="submit" className="h-12 px-6 hover-elevate" disabled={createMut.isPending || !newName.trim()}>
-          <Plus className="w-4 h-4 mr-2" /> Ajouter
+          <Plus className="w-4 h-4 me-2" /> {t("admin.catalogue.add")}
         </Button>
       </form>
 
       <div className="bg-white rounded-xl border overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+          <div className="p-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>
         ) : !oilTypes?.length ? (
-          <div className="p-8 text-center text-muted-foreground">Aucun type d'huile trouvé.</div>
+          <div className="p-8 text-center text-muted-foreground">{t("admin.catalogueOil.empty")}</div>
         ) : (
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead>Nom du Type</TableHead>
-                <TableHead className="text-center w-32">Produits</TableHead>
-                <TableHead className="text-right w-28">Actions</TableHead>
+                <TableHead>{t("admin.catalogueOil.colTypeName")}</TableHead>
+                <TableHead className="text-center w-32">{t("admin.catalogue.products")}</TableHead>
+                <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -342,6 +333,7 @@ function OilTypesTab() {
 // ═══════════════════════════════════════════════════════════
 
 function CategoriesTab() {
+  const { t } = useTranslation();
   const [newCatName, setNewCatName] = useState("");
   const [newCatImage, setNewCatImage] = useState<string | null>(null);
   const [uploadingNew, setUploadingNew] = useState(false);
@@ -363,9 +355,9 @@ function CategoriesTab() {
         queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
         setNewCatName("");
         setNewCatImage(null);
-        toast({ title: "Catégorie ajoutée." });
+        toast({ title: t("admin.catalogue.toastCatAdd") });
       },
-      onError: () => toast({ title: "Erreur lors de l'ajout.", variant: "destructive" }),
+      onError: () => toast({ title: t("admin.catalogue.toastCatErr"), variant: "destructive" }),
     },
   });
 
@@ -375,7 +367,7 @@ function CategoriesTab() {
         queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
         setEditingId(null);
         setEditImage(null);
-        toast({ title: "Catégorie mise à jour." });
+        toast({ title: t("admin.catalogue.toastCatUpd") });
       },
     },
   });
@@ -384,9 +376,9 @@ function CategoriesTab() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
-        toast({ title: "Catégorie supprimée." });
+        toast({ title: t("admin.catalogue.toastCatDel") });
       },
-      onError: () => toast({ title: "Impossible de supprimer une catégorie avec des produits.", variant: "destructive" }),
+      onError: () => toast({ title: t("admin.categories.toastDeleteErr"), variant: "destructive" }),
     },
   });
 
@@ -396,16 +388,16 @@ function CategoriesTab() {
     setLoading: (v: boolean) => void
   ) => {
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Fichier invalide. Sélectionnez une image.", variant: "destructive" });
+      toast({ title: t("admin.productForm.toastPickImage"), variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
       const result = await uploadToImgBB(file);
       setImg(result.url);
-      toast({ title: "Image téléchargée." });
+      toast({ title: t("admin.categories.toastImgOk") });
     } catch (err: any) {
-      toast({ title: err.message || "Échec du téléchargement.", variant: "destructive" });
+      toast({ title: err.message || t("admin.categories.toastUploadErr"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -428,17 +420,10 @@ function CategoriesTab() {
     <div className="max-w-4xl">
       {/* Add Form */}
       <form onSubmit={handleCreate} className="bg-white p-6 rounded-xl border mb-8">
-        <label className="text-sm font-bold text-primary mb-4 block uppercase tracking-wider">
-          Ajouter une Nouvelle Catégorie
-        </label>
+        <label className="text-sm font-bold text-primary mb-4 block uppercase tracking-wider">{t("admin.categories.addNewSection")}</label>
         <div className="flex gap-4 items-center flex-wrap">
           <div className="flex-1 min-w-[200px]">
-            <Input
-              placeholder="ex : Huiles Moteur, Lubrifiants..."
-              value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              className="h-12"
-            />
+            <Input placeholder={t("admin.catalogue.newCatPh")} value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="h-12" />
           </div>
 
           {/* Image thumbnail or upload button */}
@@ -472,14 +457,14 @@ function CategoriesTab() {
               className="h-12 w-12 flex-shrink-0"
               onClick={() => newImageRef.current?.click()}
               disabled={uploadingNew}
-              title="Ajouter une image"
+              title={t("admin.productForm.addImage")}
             >
               {uploadingNew ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             </Button>
           )}
 
           <Button type="submit" className="h-12 px-6 hover-elevate flex-shrink-0" disabled={createMut.isPending || !newCatName.trim()}>
-            <Plus className="w-4 h-4 mr-2" /> Ajouter
+            <Plus className="w-4 h-4 me-2" /> {t("admin.catalogue.add")}
           </Button>
         </div>
       </form>
@@ -487,17 +472,17 @@ function CategoriesTab() {
       {/* Table */}
       <div className="bg-white rounded-xl border overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Chargement...</div>
+          <div className="p-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>
         ) : !categories?.length ? (
-          <div className="p-8 text-center text-muted-foreground">Aucune catégorie trouvée.</div>
+          <div className="p-8 text-center text-muted-foreground">{t("admin.catalogue.noCategories")}</div>
         ) : (
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead className="w-16">Image</TableHead>
-                <TableHead>Nom de la Catégorie</TableHead>
-                <TableHead className="text-center w-32">Produits</TableHead>
-                <TableHead className="text-right w-28">Actions</TableHead>
+                <TableHead className="w-16">{t("admin.catalogue.logo")}</TableHead>
+                <TableHead>{t("admin.categories.colName")}</TableHead>
+                <TableHead className="text-center w-32">{t("admin.catalogue.products")}</TableHead>
+                <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -525,7 +510,7 @@ function CategoriesTab() {
                               alt=""
                               className="w-10 h-10 rounded-lg object-cover border cursor-pointer hover:opacity-80"
                               onClick={() => editImageRef.current?.click()}
-                              title="Cliquer pour changer l'image"
+                              title={t("admin.catalogue.changeImageTitle")}
                             />
                             <button
                               type="button"

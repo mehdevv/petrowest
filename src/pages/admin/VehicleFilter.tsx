@@ -19,6 +19,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { getCarBrands, searchCarBrands, type CarBrandEntry } from "@/lib/car-logos";
+import { useTranslation } from "react-i18next";
 
 function brandLogoUrl(name: string, customUrl?: string | null) {
   if (customUrl) return customUrl;
@@ -56,7 +57,7 @@ function BrandAutocomplete({
   return (
     <div ref={ref} className="relative flex-1">
       <Input
-        placeholder="Taper le nom de la marque..."
+        placeholder={t("admin.vehicle.brandPh")}
         value={query}
         disabled={disabled}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
@@ -88,7 +89,7 @@ function BrandAutocomplete({
       )}
       {open && query.length >= 1 && suggestions.length === 0 && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl p-3 text-sm text-muted-foreground text-center">
-          Aucune marque trouvée pour "{query}"
+          {t("admin.vehicle.noBrandMatch", { query })}
         </div>
       )}
     </div>
@@ -96,6 +97,7 @@ function BrandAutocomplete({
 }
 
 function MultiProductSelect({ yearId }: { yearId: number }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: currentProducts } = useGetVehicleYearProducts(yearId, { query: { enabled: !!yearId } });
@@ -104,7 +106,7 @@ function MultiProductSelect({ yearId }: { yearId: number }) {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [`/api/vehicle/years/${yearId}/products`] });
-        toast({ title: "Produits mis à jour." });
+        toast({ title: t("admin.vehicle.toastProductsUpd") });
       },
     },
   });
@@ -139,14 +141,14 @@ function MultiProductSelect({ yearId }: { yearId: number }) {
           </Badge>
         ))}
         {selectedIds.length === 0 && (
-          <span className="text-sm text-muted-foreground italic">Aucun produit assigné</span>
+          <span className="text-sm text-muted-foreground italic">{t("admin.vehiclePage.noProductsAssigned")}</span>
         )}
       </div>
       {/* Add product */}
       <div className="flex gap-2 items-center">
         <Select value={addingId} onValueChange={setAddingId}>
           <SelectTrigger className="flex-1 h-9 text-sm border-primary/20">
-            <SelectValue placeholder="Ajouter un produit..." />
+            <SelectValue placeholder={t("admin.vehiclePage.addProductPh")} />
           </SelectTrigger>
           <SelectContent>
             {availableProducts.map((p) => (
@@ -165,8 +167,8 @@ function MultiProductSelect({ yearId }: { yearId: number }) {
 }
 
 export default function VehicleFilter() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   // ── Categories ──
   const [catName, setCatName] = useState("");
@@ -242,25 +244,25 @@ export default function VehicleFilter() {
   return (
     <AdminLayout>
       <div className="mb-8">
-        <h1 className="font-display text-4xl text-primary mb-1">Logique du Filtre Véhicule</h1>
-        <p className="text-muted-foreground">Gérer la hiérarchie : Catégorie → Marque → Modèle → Moteur → Année → Huiles Recommandées</p>
+        <h1 className="font-display text-4xl text-primary mb-1">{t("admin.vehiclePage.title")}</h1>
+        <p className="text-muted-foreground">{t("admin.vehiclePage.subtitle")}</p>
       </div>
 
       <div className="bg-white rounded-xl border p-2 sm:p-6">
         <Tabs defaultValue="categories">
-          <TabsList className="grid w-full grid-cols-5 h-14 bg-gray-100 p-1 rounded-lg mb-8">
-            <TabsTrigger value="categories" className="font-bold data-[state=active]:bg-white text-xs sm:text-sm">1. Catégories</TabsTrigger>
-            <TabsTrigger value="brands" className="font-bold data-[state=active]:bg-white text-xs sm:text-sm">2. Marques</TabsTrigger>
-            <TabsTrigger value="models" className="font-bold data-[state=active]:bg-white text-xs sm:text-sm">3. Modèles</TabsTrigger>
-            <TabsTrigger value="versions" className="font-bold data-[state=active]:bg-white text-xs sm:text-sm">4. Moteurs</TabsTrigger>
-            <TabsTrigger value="years" className="font-bold data-[state=active]:bg-white text-xs sm:text-sm">5. Années & Huiles</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto bg-gray-100 p-1 rounded-lg mb-8 gap-1">
+            <TabsTrigger value="categories" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab1")}</TabsTrigger>
+            <TabsTrigger value="brands" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab2")}</TabsTrigger>
+            <TabsTrigger value="models" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab3")}</TabsTrigger>
+            <TabsTrigger value="versions" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab4")}</TabsTrigger>
+            <TabsTrigger value="years" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab5")}</TabsTrigger>
           </TabsList>
 
           {/* TAB 1 — Categories */}
           <TabsContent value="categories" className="space-y-6">
             <div className="flex gap-4 max-w-xl">
-              <Input placeholder="Nouvelle Catégorie (ex : Voitures)" value={catName} onChange={e => setCatName(e.target.value)} />
-              <Button onClick={() => createCat.mutate({ data: { name: catName }})} disabled={!catName || createCat.isPending}>Ajouter</Button>
+              <Input placeholder={t("admin.vehiclePage.newCatPh")} value={catName} onChange={e => setCatName(e.target.value)} />
+              <Button onClick={() => createCat.mutate({ data: { name: catName }})} disabled={!catName || createCat.isPending}>{t("admin.vehicle.add")}</Button>
             </div>
             <Table className="max-w-2xl border rounded-lg">
               <TableHeader className="bg-gray-50"><TableRow><TableHead>Nom de la Catégorie</TableHead><TableHead className="w-24"></TableHead></TableRow></TableHeader>
@@ -278,27 +280,27 @@ export default function VehicleFilter() {
           {/* TAB 2 — Brands with logos */}
           <TabsContent value="brands" className="space-y-6">
             <div className="max-w-xl bg-gray-50 p-4 rounded-lg border mb-6">
-              <label className="text-sm font-bold block mb-2 text-primary uppercase">Sélectionner la Catégorie Parent</label>
+              <label className="text-sm font-bold block mb-2 text-primary uppercase">{t("admin.vehiclePage.parentCat")}</label>
               <Select value={selectedCatId} onValueChange={setSelectedCatId}>
-                <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                 <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {selectedCatId && (
               <>
                 <div className="max-w-2xl">
-                  <label className="text-sm font-bold block mb-1 text-primary">Ajouter une Marque (taper pour chercher)</label>
+                  <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.addBrandHint")}</label>
                   <BrandAutocomplete
                     onSelect={handleBrandSelect}
                     disabled={createBrand.isPending}
                   />
-                  <p className="text-xs text-muted-foreground mt-1.5">Tapez le nom — les suggestions apparaissent automatiquement avec le logo correct.</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">{t("admin.vehiclePage.brandAutoHint")}</p>
                 </div>
                 <Table className="max-w-3xl border rounded-lg">
                   <TableHeader className="bg-gray-50">
                     <TableRow>
-                      <TableHead className="w-16">Logo</TableHead>
-                      <TableHead>Nom de la Marque</TableHead>
+                      <TableHead className="w-16">{t("admin.vehiclePage.colLogo")}</TableHead>
+                      <TableHead>{t("admin.vehiclePage.colBrandName")}</TableHead>
                       <TableHead className="w-24"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -333,16 +335,16 @@ export default function VehicleFilter() {
           <TabsContent value="models" className="space-y-6">
             <div className="max-w-xl bg-gray-50 p-4 rounded-lg border mb-6 grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">1. Catégorie</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step1Cat")}</label>
                 <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSelectedBrandId(""); }}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">2. Marque</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step2Brand")}</label>
                 <Select value={selectedBrandId} onValueChange={setSelectedBrandId} disabled={!selectedCatId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>
                     {brands?.map(b => (
                       <SelectItem key={b.id} value={b.id.toString()}>
@@ -359,11 +361,11 @@ export default function VehicleFilter() {
             {selectedBrandId && (
               <>
                 <div className="flex gap-4 max-w-xl">
-                  <Input placeholder="Nouveau Modèle (ex : 208)" value={modelName} onChange={e => setModelName(e.target.value)} />
-                  <Button onClick={() => createModel.mutate({ data: { name: modelName, vehicleBrandId: Number(selectedBrandId) }})} disabled={!modelName}>Ajouter</Button>
+                  <Input placeholder={t("admin.vehiclePage.newModelSimple")} value={modelName} onChange={e => setModelName(e.target.value)} />
+                  <Button onClick={() => createModel.mutate({ data: { name: modelName, vehicleBrandId: Number(selectedBrandId) }})} disabled={!modelName}>{t("admin.vehicle.add")}</Button>
                 </div>
                 <Table className="max-w-2xl border rounded-lg">
-                  <TableHeader className="bg-gray-50"><TableRow><TableHead>Nom du Modèle</TableHead><TableHead className="w-24"></TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-gray-50"><TableRow><TableHead>{t("admin.vehiclePage.colModelName")}</TableHead><TableHead className="w-24"></TableHead></TableRow></TableHeader>
                   <TableBody>
                     {models?.map(m => (
                       <TableRow key={m.id}>
@@ -381,16 +383,16 @@ export default function VehicleFilter() {
           <TabsContent value="versions" className="space-y-6">
             <div className="max-w-3xl bg-gray-50 p-4 rounded-lg border mb-6 grid grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">1. Catégorie</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step1Cat")}</label>
                 <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSelectedBrandId(""); setSelectedModelId(""); }}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">2. Marque</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step2Brand")}</label>
                 <Select value={selectedBrandId} onValueChange={(v) => { setSelectedBrandId(v); setSelectedModelId(""); }} disabled={!selectedCatId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>
                     {brands?.map(b => (
                       <SelectItem key={b.id} value={b.id.toString()}>
@@ -404,9 +406,9 @@ export default function VehicleFilter() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">3. Modèle</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step3Model")}</label>
                 <Select value={selectedModelId} onValueChange={setSelectedModelId} disabled={!selectedBrandId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>{models?.map(m => <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -415,8 +417,8 @@ export default function VehicleFilter() {
             {selectedModelId && (
               <>
                 <div className="flex gap-4 mb-8">
-                  <Input className="max-w-sm" placeholder="Nouveau Moteur (ex : 1.6 HDi)" value={versionName} onChange={e => setVersionName(e.target.value)} />
-                  <Button onClick={() => createVersion.mutate({ data: { name: versionName, vehicleModelId: Number(selectedModelId) }})} disabled={!versionName}>Ajouter un Moteur</Button>
+                  <Input className="max-w-sm" placeholder={t("admin.vehiclePage.versionPh")} value={versionName} onChange={e => setVersionName(e.target.value)} />
+                  <Button onClick={() => createVersion.mutate({ data: { name: versionName, vehicleModelId: Number(selectedModelId) }})} disabled={!versionName}>{t("admin.vehiclePage.addEngineBtn")}</Button>
                 </div>
                 
                 <Table className="border rounded-lg shadow-sm">
@@ -445,16 +447,16 @@ export default function VehicleFilter() {
           <TabsContent value="years" className="space-y-6">
             <div className="bg-gray-50 p-4 rounded-lg border mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">1. Catégorie</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step1Cat")}</label>
                 <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSelectedBrandId(""); setSelectedModelId(""); setSelectedVersionId(""); }}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">2. Marque</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step2Brand")}</label>
                 <Select value={selectedBrandId} onValueChange={(v) => { setSelectedBrandId(v); setSelectedModelId(""); setSelectedVersionId(""); }} disabled={!selectedCatId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>
                     {brands?.map(b => (
                       <SelectItem key={b.id} value={b.id.toString()}>
@@ -468,16 +470,16 @@ export default function VehicleFilter() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">3. Modèle</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step3Model")}</label>
                 <Select value={selectedModelId} onValueChange={(v) => { setSelectedModelId(v); setSelectedVersionId(""); }} disabled={!selectedBrandId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>{models?.map(m => <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-bold block mb-2 text-primary">4. Moteur</label>
+                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step4Engine")}</label>
                 <Select value={selectedVersionId} onValueChange={setSelectedVersionId} disabled={!selectedModelId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
                   <SelectContent>{versions?.map(v => <SelectItem key={v.id} value={v.id.toString()}>{v.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -493,25 +495,25 @@ export default function VehicleFilter() {
                       size="sm"
                       onClick={() => setYearMode("single")}
                     >
-                      Année unique
+                      {t("admin.vehiclePage.singleYear")}
                     </Button>
                     <Button
                       variant={yearMode === "range" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setYearMode("range")}
                     >
-                      Intervalle d'années
+                      {t("admin.vehiclePage.yearRange")}
                     </Button>
                   </div>
 
                   {yearMode === "single" ? (
                     <div className="flex gap-4 items-end">
                       <div>
-                        <label className="text-sm font-bold block mb-1 text-primary">Année</label>
+                        <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.yearLabel")}</label>
                         <Input
                           type="number"
                           className="w-40"
-                          placeholder="Ex : 2022"
+                          placeholder={t("admin.vehiclePage.yearPh")}
                           min={1990}
                           max={2030}
                           value={yearValue}
@@ -519,13 +521,13 @@ export default function VehicleFilter() {
                         />
                       </div>
                       <Button onClick={handleAddSingleYear} disabled={!yearValue || createYear.isPending}>
-                        Ajouter
+                        {t("admin.vehicle.add")}
                       </Button>
                     </div>
                   ) : (
                     <div className="flex gap-4 items-end">
                       <div>
-                        <label className="text-sm font-bold block mb-1 text-primary">De</label>
+                        <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.from")}</label>
                         <Input
                           type="number"
                           className="w-32"
@@ -537,7 +539,7 @@ export default function VehicleFilter() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-bold block mb-1 text-primary">À</label>
+                        <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.to")}</label>
                         <Input
                           type="number"
                           className="w-32"
@@ -552,7 +554,14 @@ export default function VehicleFilter() {
                         onClick={handleAddRange}
                         disabled={!yearFrom || !yearTo || Number(yearFrom) > Number(yearTo) || rangeAdding}
                       >
-                        {rangeAdding ? "Ajout en cours..." : `Ajouter ${yearFrom && yearTo && Number(yearTo) >= Number(yearFrom) ? Number(yearTo) - Number(yearFrom) + 1 : 0} années`}
+                        {rangeAdding
+                          ? t("admin.vehiclePage.yearAdding")
+                          : t("admin.vehiclePage.addYearsCount", {
+                              count:
+                                yearFrom && yearTo && Number(yearTo) >= Number(yearFrom)
+                                  ? Number(yearTo) - Number(yearFrom) + 1
+                                  : 0,
+                            })}
                       </Button>
                     </div>
                   )}
@@ -561,8 +570,8 @@ export default function VehicleFilter() {
                 <Table className="border rounded-lg shadow-sm">
                   <TableHeader className="bg-[#001D3D] hover:bg-[#001D3D]">
                     <TableRow>
-                      <TableHead className="text-white w-28">Année</TableHead>
-                      <TableHead className="text-white">Huiles Recommandées</TableHead>
+                      <TableHead className="text-white w-28">{t("admin.vehiclePage.colYear")}</TableHead>
+                      <TableHead className="text-white">{t("admin.vehiclePage.recommendedOils")}</TableHead>
                       <TableHead className="text-right text-white w-20"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -583,7 +592,7 @@ export default function VehicleFilter() {
                     {(!years || years.length === 0) && (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                          Aucune année ajoutée pour ce moteur.
+                          {t("admin.vehiclePage.noYears")}
                         </TableCell>
                       </TableRow>
                     )}

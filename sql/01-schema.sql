@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS products (
   compatible_vehicle_types TEXT[] NOT NULL DEFAULT '{}',  -- ['Car', 'Truck', 'Moto']
   in_stock BOOLEAN NOT NULL DEFAULT true,
   featured BOOLEAN NOT NULL DEFAULT false,
+  meta_pixel_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
