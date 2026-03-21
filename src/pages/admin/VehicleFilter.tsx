@@ -35,6 +35,7 @@ function BrandAutocomplete({
   onSelect: (entry: CarBrandEntry) => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [allBrands, setAllBrands] = useState<CarBrandEntry[]>([]);
   const [open, setOpen] = useState(false);
