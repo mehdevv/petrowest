@@ -110,6 +110,162 @@ function activeCount(
   return n;
 }
 
+type CategoryRow = { id: number; name: string; productCount: number };
+type BrandRow = { id: number; name: string; productCount: number };
+type OilTypeRow = { id: number; name: string; productCount: number };
+
+/** Must live outside `Shop` so React keeps the same component type across parent re-renders (otherwise filter accordions remount and collapse). */
+function ShopFilterPanel({
+  numActive,
+  clearFilters,
+  inStockOnly,
+  setInStockOnly,
+  setPage,
+  categoriesData,
+  selectedCategoryId,
+  setSelectedCategoryId,
+  brandsData,
+  selectedBrand,
+  setSelectedBrand,
+  oilTypesData,
+  selectedOilType,
+  setSelectedOilType,
+  priceRange,
+  setPriceRange,
+}: {
+  numActive: number;
+  clearFilters: () => void;
+  inStockOnly: boolean;
+  setInStockOnly: (v: boolean) => void;
+  setPage: (n: number | ((p: number) => number)) => void;
+  categoriesData: CategoryRow[] | undefined;
+  selectedCategoryId: number | null;
+  setSelectedCategoryId: (id: number | null) => void;
+  brandsData: BrandRow[] | undefined;
+  selectedBrand: string;
+  setSelectedBrand: (s: string) => void;
+  oilTypesData: OilTypeRow[] | undefined;
+  selectedOilType: string;
+  setSelectedOilType: (s: string) => void;
+  priceRange: number[];
+  setPriceRange: (v: number[]) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="space-y-0 text-sm">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {t("shop.filters")}
+          {numActive > 0 && (
+            <Badge className="ml-2 px-1.5 py-0 text-xs bg-secondary text-primary">
+              {numActive}
+            </Badge>
+          )}
+        </span>
+        {numActive > 0 && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-xs text-destructive hover:underline flex items-center gap-1"
+          >
+            <X className="w-3 h-3" /> {t("shop.clear")}
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
+        <span className="text-xs font-bold uppercase tracking-widest text-primary/80">
+          {t("shop.inStockOnly")}
+        </span>
+        <Switch
+          checked={inStockOnly}
+          onCheckedChange={(v) => {
+            setInStockOnly(v);
+            setPage(1);
+          }}
+          className="scale-75"
+        />
+      </div>
+
+      {categoriesData && categoriesData.length > 0 && (
+        <FilterSection title={t("shop.category")} count={selectedCategoryId ? 1 : 0}>
+          {categoriesData.map((cat) => (
+            <FilterCheckbox
+              key={cat.id}
+              id={`cat-${cat.id}`}
+              label={cat.name}
+              count={cat.productCount}
+              checked={selectedCategoryId === cat.id}
+              onChange={(checked) => {
+                setSelectedCategoryId(checked ? cat.id : null);
+                setPage(1);
+              }}
+            />
+          ))}
+        </FilterSection>
+      )}
+
+      {brandsData && brandsData.length > 0 && (
+        <FilterSection title={t("shop.brand")} count={selectedBrand ? 1 : 0}>
+          {brandsData.map((brand) => (
+            <FilterCheckbox
+              key={brand.id}
+              id={`brand-${brand.id}`}
+              label={brand.name}
+              count={brand.productCount}
+              checked={selectedBrand === brand.name}
+              onChange={(checked) => {
+                setSelectedBrand(checked ? brand.name : "");
+                setPage(1);
+              }}
+            />
+          ))}
+        </FilterSection>
+      )}
+
+      {oilTypesData && oilTypesData.length > 0 && (
+        <FilterSection title={t("shop.oilType")} count={selectedOilType ? 1 : 0}>
+          {oilTypesData.map((type) => (
+            <FilterCheckbox
+              key={type.id}
+              id={`type-${type.name}`}
+              label={type.name}
+              count={type.productCount}
+              checked={selectedOilType === type.name}
+              onChange={(checked) => {
+                setSelectedOilType(checked ? type.name : "");
+                setPage(1);
+              }}
+            />
+          ))}
+        </FilterSection>
+      )}
+
+      <FilterSection
+        title={t("shop.priceDa")}
+        count={priceRange[0] > 0 || priceRange[1] < 15000 ? 1 : 0}
+      >
+        <div className="px-2 pt-1 pb-2">
+          <Slider
+            value={priceRange}
+            min={0}
+            max={15000}
+            step={500}
+            minStepsBetweenThumbs={1}
+            onValueChange={(v) => setPriceRange(v)}
+            className="py-3"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1 font-medium">
+            <span>{priceRange[0].toLocaleString()} DA</span>
+            <span>{priceRange[1].toLocaleString()} DA</span>
+          </div>
+        </div>
+      </FilterSection>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Shop() {
   const { t } = useTranslation();
@@ -122,6 +278,8 @@ export default function Shop() {
   const [selectedOilType, setSelectedOilType] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [priceRange, setPriceRange] = useState([0, 15000]);
+  /** Debounced for API: two thumbs fire many updates while dragging */
+  const [debouncedPriceRange, setDebouncedPriceRange] = useState([0, 15000]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [page, setPage] = useState(1);
   const initialized = useRef(false);
@@ -145,6 +303,14 @@ export default function Shop() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPriceRange(priceRange);
+      setPage(1);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [priceRange]);
+
   // Data hooks
   const { data: brandsData } = useListBrands();
   const { data: oilTypesData } = useListOilTypes();
@@ -155,8 +321,8 @@ export default function Shop() {
     brand: selectedBrand || undefined,
     oilType: selectedOilType || undefined,
     categoryId: selectedCategoryId ?? undefined,
-    minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
-    maxPrice: priceRange[1] < 15000 ? priceRange[1] : undefined,
+    minPrice: debouncedPriceRange[0] > 0 ? debouncedPriceRange[0] : undefined,
+    maxPrice: debouncedPriceRange[1] < 15000 ? debouncedPriceRange[1] : undefined,
     inStock: inStockOnly ? true : undefined,
     page,
     limit: 12,
@@ -168,6 +334,7 @@ export default function Shop() {
     setSelectedOilType("");
     setSelectedCategoryId(null);
     setPriceRange([0, 15000]);
+    setDebouncedPriceRange([0, 15000]);
     setInStockOnly(false);
     setPage(1);
   };
@@ -180,126 +347,24 @@ export default function Shop() {
     inStockOnly
   );
 
-  // ── Filter panel (shared between sidebar and sheet) ──────────────────────
-  const FilterPanel = () => (
-    <div className="space-y-0 text-sm">
-      {/* Top bar: results + clear */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          {t("shop.filters")}
-          {numActive > 0 && (
-            <Badge className="ml-2 px-1.5 py-0 text-xs bg-secondary text-primary">
-              {numActive}
-            </Badge>
-          )}
-        </span>
-        {numActive > 0 && (
-          <button
-            onClick={clearFilters}
-            className="text-xs text-destructive hover:underline flex items-center gap-1"
-          >
-            <X className="w-3 h-3" /> {t("shop.clear")}
-          </button>
-        )}
-      </div>
-
-      {/* In stock toggle */}
-      <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
-        <span className="text-xs font-bold uppercase tracking-widest text-primary/80">
-          {t("shop.inStockOnly")}
-        </span>
-        <Switch
-          checked={inStockOnly}
-          onCheckedChange={(v) => {
-            setInStockOnly(v);
-            setPage(1);
-          }}
-          className="scale-75"
-        />
-      </div>
-
-      {/* Categories */}
-      {categoriesData && categoriesData.length > 0 && (
-        <FilterSection title={t("shop.category")} count={selectedCategoryId ? 1 : 0}>
-          {categoriesData.map((cat) => (
-            <FilterCheckbox
-              key={cat.id}
-              id={`cat-${cat.id}`}
-              label={cat.name}
-              count={cat.productCount}
-              checked={selectedCategoryId === cat.id}
-              onChange={(checked) => {
-                setSelectedCategoryId(checked ? cat.id : null);
-                setPage(1);
-              }}
-            />
-          ))}
-        </FilterSection>
-      )}
-
-      {/* Brands */}
-      {brandsData && brandsData.length > 0 && (
-        <FilterSection title={t("shop.brand")} count={selectedBrand ? 1 : 0}>
-          {brandsData.map((brand) => (
-            <FilterCheckbox
-              key={brand.id}
-              id={`brand-${brand.id}`}
-              label={brand.name}
-              count={brand.productCount}
-              checked={selectedBrand === brand.name}
-              onChange={(checked) => {
-                setSelectedBrand(checked ? brand.name : "");
-                setPage(1);
-              }}
-            />
-          ))}
-        </FilterSection>
-      )}
-
-      {/* Oil types */}
-      {oilTypesData && oilTypesData.length > 0 && (
-        <FilterSection title={t("shop.oilType")} count={selectedOilType ? 1 : 0}>
-          {oilTypesData.map((type) => (
-            <FilterCheckbox
-              key={type.id}
-              id={`type-${type.name}`}
-              label={type.name}
-              count={type.productCount}
-              checked={selectedOilType === type.name}
-              onChange={(checked) => {
-                setSelectedOilType(checked ? type.name : "");
-                setPage(1);
-              }}
-            />
-          ))}
-        </FilterSection>
-      )}
-
-      {/* Price Range */}
-      <FilterSection
-        title={t("shop.priceDa")}
-        count={priceRange[0] > 0 || priceRange[1] < 15000 ? 1 : 0}
-      >
-        <div className="px-2 pt-1 pb-2">
-          <Slider
-            value={priceRange}
-            min={0}
-            max={15000}
-            step={500}
-            onValueChange={(v) => {
-              setPriceRange(v);
-              setPage(1);
-            }}
-            className="py-3"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1 font-medium">
-            <span>{priceRange[0].toLocaleString()} DA</span>
-            <span>{priceRange[1].toLocaleString()} DA</span>
-          </div>
-        </div>
-      </FilterSection>
-    </div>
-  );
+  const filterPanelProps = {
+    numActive,
+    clearFilters,
+    inStockOnly,
+    setInStockOnly,
+    setPage,
+    categoriesData,
+    selectedCategoryId,
+    setSelectedCategoryId,
+    brandsData,
+    selectedBrand,
+    setSelectedBrand,
+    oilTypesData,
+    selectedOilType,
+    setSelectedOilType,
+    priceRange,
+    setPriceRange,
+  };
 
   return (
     <PublicLayout>
@@ -339,7 +404,7 @@ export default function Shop() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 overflow-y-auto pt-8">
-              <FilterPanel />
+              <ShopFilterPanel {...filterPanelProps} />
             </SheetContent>
           </Sheet>
         </div>
@@ -347,7 +412,7 @@ export default function Shop() {
         {/* ── Desktop Sidebar ── */}
         <aside className="hidden md:block w-56 flex-shrink-0">
           <div className="sticky top-24 bg-white rounded-xl border p-4 shadow-sm">
-            <FilterPanel />
+            <ShopFilterPanel {...filterPanelProps} />
           </div>
         </aside>
 
