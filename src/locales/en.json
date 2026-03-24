@@ -56,6 +56,7 @@
     "vehicleEngine": "4. Engine type",
     "vehicleYear": "5. Year",
     "selectBrand": "Select brand",
+    "selectVehicleType": "Select vehicle type",
     "selectModel": "Select model",
     "enginePlaceholder": "Engine",
     "yearPlaceholder": "Year",

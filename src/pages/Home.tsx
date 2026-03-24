@@ -93,6 +93,7 @@ function VehicleFilter() {
     { id: "truck", name: t("home.categories.truck") },
   ];
   const displayCategories = categories?.length ? categories : defaultCategories;
+  const useCategoryDropdown = displayCategories.length > 3;
 
   return (
     <div className="w-full max-w-6xl mx-auto mt-10">
@@ -105,23 +106,48 @@ function VehicleFilter() {
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
                 {t("home.vehicleType")}
               </label>
-              <div className="flex h-11 rounded-md overflow-hidden border border-white/20">
-                {displayCategories.map((cat, i) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => { setCategoryId(cat.id.toString()); resetFromCategory(); }}
-                    className={`flex-1 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-                      i > 0 ? "border-l border-white/20" : ""
-                    } ${
-                      categoryId === cat.id.toString()
-                        ? "bg-secondary text-primary"
-                        : "bg-white/5 text-white hover:bg-white/15"
-                    }`}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
+              {useCategoryDropdown ? (
+                <Select
+                  value={categoryId || undefined}
+                  onValueChange={(val) => {
+                    setCategoryId(val);
+                    resetFromCategory();
+                  }}
+                >
+                  <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
+                    <SelectValue placeholder={t("home.selectVehicleType")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {displayCategories.map((cat) => (
+                      <SelectItem key={String(cat.id)} value={cat.id.toString()}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex h-11 rounded-md overflow-hidden border border-white/20">
+                  {displayCategories.map((cat, i) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setCategoryId(cat.id.toString());
+                        resetFromCategory();
+                      }}
+                      className={`flex-1 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                        i > 0 ? "border-l border-white/20" : ""
+                      } ${
+                        categoryId === cat.id.toString()
+                          ? "bg-secondary text-primary"
+                          : "bg-white/5 text-white hover:bg-white/15"
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 2. Brand with logo */}
