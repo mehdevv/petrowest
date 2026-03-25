@@ -167,6 +167,19 @@ export interface OrderStats {
   pendingOrders: number;
 }
 
+export interface RevenueHistoryBucket {
+  /** Start of bucket as YYYY-MM-DD (UTC date of trunc) */
+  period: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface RevenueHistory {
+  daily: RevenueHistoryBucket[];
+  weekly: RevenueHistoryBucket[];
+  monthly: RevenueHistoryBucket[];
+}
+
 export interface Category {
   id: number;
   name: string;

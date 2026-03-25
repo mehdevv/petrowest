@@ -55,10 +55,11 @@ BEGIN
   SELECT COUNT(*) INTO v_month
   FROM orders WHERE created_at >= date_trunc('month', CURRENT_TIMESTAMP);
 
+  -- Revenue = money actually received: delivered parcels only (not pending/shipped/cancelled)
   SELECT COALESCE(SUM(total_price), 0) INTO v_revenue
   FROM orders
   WHERE created_at >= date_trunc('month', CURRENT_TIMESTAMP)
-    AND status != 'Cancelled';
+    AND status = 'Delivered';
 
   SELECT COUNT(*) INTO v_pending
   FROM orders WHERE status = 'Pending';

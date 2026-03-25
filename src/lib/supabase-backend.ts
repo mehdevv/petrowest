@@ -333,6 +333,13 @@ export async function handleApiRoute(
     return { data: result, status: 200 };
   }
 
+  if (method === "GET" && path === "/api/orders/revenue-history") {
+    const { data, error } = await supabase.rpc("get_revenue_history");
+    if (error) throw new RouteError(500, error.message);
+    const result = typeof data === "string" ? JSON.parse(data) : data;
+    return { data: result, status: 200 };
+  }
+
   // List orders — uses SECURITY DEFINER RPC to bypass RLS entirely
   if (method === "GET" && path === "/api/orders") {
     const page  = parseInt(q.page  || "1");

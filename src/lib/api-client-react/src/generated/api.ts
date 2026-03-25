@@ -42,6 +42,7 @@ import type {
   Order,
   OrderListResponse,
   OrderStats,
+  RevenueHistory,
   Product,
   ProductListResponse,
   SaveDeliveryPricesBody,
@@ -1018,6 +1019,79 @@ export function useGetOrderStats<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetOrderStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get revenue history — delivered orders only (admin)
+ */
+export const getGetRevenueHistoryUrl = () => {
+  return `/api/orders/revenue-history`;
+};
+
+export const getRevenueHistory = async (
+  options?: RequestInit,
+): Promise<RevenueHistory> => {
+  return customFetch<RevenueHistory>(getGetRevenueHistoryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRevenueHistoryQueryKey = () => {
+  return [`/api/orders/revenue-history`] as const;
+};
+
+export const getGetRevenueHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRevenueHistory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRevenueHistory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRevenueHistoryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRevenueHistory>>> = ({
+    signal,
+  }) => getRevenueHistory({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRevenueHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRevenueHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRevenueHistory>>
+>;
+
+/**
+ * @summary Get revenue history — delivered orders only (admin)
+ */
+export function useGetRevenueHistory<
+  TData = Awaited<ReturnType<typeof getRevenueHistory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRevenueHistory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRevenueHistoryQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
