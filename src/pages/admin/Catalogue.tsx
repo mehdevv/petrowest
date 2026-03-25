@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import {
@@ -14,10 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, Plus, X, Check, Tag, Droplets, FolderOpen, Upload, Loader2, ImageIcon, Package, Gauge } from "lucide-react";
+import { Pencil, Trash2, Plus, X, Check, Tag, Droplets, FolderOpen, Package, Gauge } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { uploadToImgBB } from "@/lib/imgbb";
 
 type TabType = "brands" | "oilTypes" | "categories" | "volumes" | "viscosity";
 
@@ -599,21 +598,14 @@ function ViscosityGradesTab() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  CATEGORIES TAB (with image upload)
+//  CATEGORIES TAB
 // ═══════════════════════════════════════════════════════════
 
 function CategoriesTab() {
   const { t } = useTranslation();
   const [newCatName, setNewCatName] = useState("");
-  const [newCatImage, setNewCatImage] = useState<string | null>(null);
-  const [uploadingNew, setUploadingNew] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
-  const [editImage, setEditImage] = useState<string | null>(null);
-  const [uploadingEdit, setUploadingEdit] = useState(false);
-
-  const newImageRef = useRef<HTMLInputElement>(null);
-  const editImageRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -624,7 +616,6 @@ function CategoriesTab() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
         setNewCatName("");
-        setNewCatImage(null);
         toast({ title: t("admin.catalogue.toastCatAdd") });
       },
       onError: () => toast({ title: t("admin.catalogue.toastCatErr"), variant: "destructive" }),
@@ -636,7 +627,6 @@ function CategoriesTab() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
         setEditingId(null);
-        setEditImage(null);
         toast({ title: t("admin.catalogue.toastCatUpd") });
       },
     },
@@ -652,38 +642,15 @@ function CategoriesTab() {
     },
   });
 
-  const handleImageFile = async (
-    file: File,
-    setImg: (url: string | null) => void,
-    setLoading: (v: boolean) => void
-  ) => {
-    if (!file.type.startsWith("image/")) {
-      toast({ title: t("admin.productForm.toastPickImage"), variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      const result = await uploadToImgBB(file);
-      setImg(result.url);
-      toast({ title: t("admin.categories.toastImgOk") });
-    } catch (err: any) {
-      toast({ title: err.message || t("admin.categories.toastUploadErr"), variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-    createMut.mutate({ data: { name: newCatName.trim(), image: newCatImage } });
+    createMut.mutate({ data: { name: newCatName.trim() } });
   };
 
   const saveEdit = (cat: any) => {
     if (!editName.trim()) return;
-    // editImage === null means "keep original"; editImage === "" means "remove"
-    const image = editImage === null ? cat.image : (editImage === "" ? null : editImage);
-    updateMut.mutate({ id: cat.id, data: { name: editName.trim(), image } });
+    updateMut.mutate({ id: cat.id, data: { name: editName.trim() } });
   };
 
   return (
@@ -695,43 +662,6 @@ function CategoriesTab() {
           <div className="flex-1 min-w-[200px]">
             <Input placeholder={t("admin.catalogue.newCatPh")} value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="h-12" />
           </div>
-
-          {/* Image thumbnail or upload button */}
-          <input
-            ref={newImageRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImageFile(file, setNewCatImage, setUploadingNew);
-              e.target.value = "";
-            }}
-          />
-          {newCatImage ? (
-            <div className="relative flex-shrink-0">
-              <img src={newCatImage} alt="Aperçu" className="w-12 h-12 rounded-lg object-cover border-2 border-primary/30" />
-              <button
-                type="button"
-                onClick={() => setNewCatImage(null)}
-                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 flex-shrink-0"
-              onClick={() => newImageRef.current?.click()}
-              disabled={uploadingNew}
-              title={t("admin.productForm.addImage")}
-            >
-              {uploadingNew ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            </Button>
-          )}
 
           <Button type="submit" className="h-12 px-6 hover-elevate flex-shrink-0" disabled={createMut.isPending || !newCatName.trim()}>
             <Plus className="w-4 h-4 me-2" /> {t("admin.catalogue.add")}
@@ -749,7 +679,6 @@ function CategoriesTab() {
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead className="w-16">{t("admin.catalogue.logo")}</TableHead>
                 <TableHead>{t("admin.categories.colName")}</TableHead>
                 <TableHead className="text-center w-32">{t("admin.catalogue.products")}</TableHead>
                 <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
@@ -758,61 +687,6 @@ function CategoriesTab() {
             <TableBody>
               {categories.map((cat: any) => (
                 <TableRow key={cat.id}>
-                  {/* Image cell */}
-                  <TableCell>
-                    {editingId === cat.id ? (
-                      <>
-                        <input
-                          ref={editImageRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageFile(file, setEditImage, setUploadingEdit);
-                            e.target.value = "";
-                          }}
-                        />
-                        {(editImage ?? cat.image) ? (
-                          <div className="relative inline-block">
-                            <img
-                              src={(editImage !== null ? editImage : cat.image) || ""}
-                              alt=""
-                              className="w-10 h-10 rounded-lg object-cover border cursor-pointer hover:opacity-80"
-                              onClick={() => editImageRef.current?.click()}
-                              title={t("admin.catalogue.changeImageTitle")}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setEditImage("")}
-                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => editImageRef.current?.click()}
-                            className="w-10 h-10 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors"
-                            disabled={uploadingEdit}
-                          >
-                            {uploadingEdit ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" /> : <ImageIcon className="w-4 h-4 text-gray-400" />}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      cat.image ? (
-                        <img src={cat.image} alt={cat.name} className="w-10 h-10 rounded-lg object-cover border" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                          <ImageIcon className="w-4 h-4 text-gray-400" />
-                        </div>
-                      )
-                    )}
-                  </TableCell>
-
-                  {/* Name cell */}
                   <TableCell>
                     {editingId === cat.id ? (
                       <Input
@@ -820,7 +694,7 @@ function CategoriesTab() {
                         onChange={(e) => setEditName(e.target.value)}
                         className="max-w-xs h-9"
                         autoFocus
-                        onKeyDown={(e) => { if (e.key === "Enter") saveEdit(cat); if (e.key === "Escape") { setEditingId(null); setEditImage(null); } }}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEdit(cat); if (e.key === "Escape") setEditingId(null); }}
                       />
                     ) : (
                       <span className="font-medium">{cat.name}</span>
@@ -837,7 +711,7 @@ function CategoriesTab() {
                         <Button size="icon" variant="ghost" onClick={() => saveEdit(cat)} disabled={updateMut.isPending}>
                           <Check className="w-4 h-4 text-green-600" />
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => { setEditingId(null); setEditImage(null); }}>
+                        <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
                           <X className="w-4 h-4 text-red-500" />
                         </Button>
                       </div>
@@ -846,7 +720,7 @@ function CategoriesTab() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => { setEditingId(cat.id); setEditName(cat.name); setEditImage(null); }}
+                          onClick={() => { setEditingId(cat.id); setEditName(cat.name); }}
                         >
                           <Pencil className="w-4 h-4 text-muted-foreground" />
                         </Button>
