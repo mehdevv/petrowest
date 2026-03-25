@@ -329,7 +329,14 @@
       "excelColAddress": "Address",
       "excelColNotes": "Notes",
       "excelSheet": "Orders",
-      "excelFilePrefix": "Orders_PetroWest"
+      "excelFilePrefix": "Orders_PetroWest",
+      "deleteOrder": "Delete order",
+      "deleteDialogTitle": "Delete this order?",
+      "deleteDialogBody": "This permanently removes the order from your records. You cannot undo this.",
+      "deleteCancel": "Cancel",
+      "deleteConfirm": "Delete",
+      "toastOrderDeleted": "Order deleted.",
+      "toastDeleteErr": "Could not delete the order."
     },
     "products": {
       "title": "Products",

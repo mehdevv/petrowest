@@ -1190,12 +1190,96 @@ export const useUpdateOrder = <
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof updateOrder>>,
+    Awaited<ReturnType<typeof updateOrder>>,
+    TError,
+    { id: number; data: BodyType<UpdateOrderBody> },
+    TContext
+  > => {
+  return useMutation(getUpdateOrderMutationOptions(options));
+};
+
+/**
+ * @summary Delete an order (admin)
+ */
+export const getDeleteOrderUrl = (id: number) => {
+  return `/api/orders/${id}`;
+};
+
+export const deleteOrder = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteOrderUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteOrderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteOrder>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteOrder>>,
   TError,
-  { id: number; data: BodyType<UpdateOrderBody> },
+  { id: number },
   TContext
 > => {
-  return useMutation(getUpdateOrderMutationOptions(options));
+  const mutationKey = ["deleteOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteOrder>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteOrder(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteOrder>>
+>;
+
+export type DeleteOrderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete an order (admin)
+ */
+export const useDeleteOrder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteOrder>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteOrder>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteOrderMutationOptions(options));
 };
 
 /**

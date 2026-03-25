@@ -397,6 +397,12 @@ export async function handleApiRoute(
     return { data: result, status: 200 };
   }
 
+  if (method === "DELETE" && (m = match(path, "/api/orders/:id"))) {
+    const { error } = await supabase.from("orders").delete().eq("id", Number(m.id));
+    if (error) throw new RouteError(500, error.message);
+    return { data: null, status: 204 };
+  }
+
   // ═══════════════════════════════════════════════════════
   //  CATEGORIES
   // ═══════════════════════════════════════════════════════

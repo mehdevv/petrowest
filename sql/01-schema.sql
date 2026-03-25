@@ -76,7 +76,10 @@ CREATE TRIGGER set_products_updated_at
 -- ============================================================
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
-  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+  product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+  product_name_snapshot TEXT,
+  product_price_snapshot NUMERIC(10, 2),
+  product_slug_snapshot TEXT,
   customer_name TEXT NOT NULL,
   phone TEXT NOT NULL,
   wilaya_code TEXT NOT NULL,

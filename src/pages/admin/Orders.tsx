@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useListOrders, useUpdateOrder } from "@workspace/api-client-react";
+import { useListOrders, useUpdateOrder, useDeleteOrder } from "@workspace/api-client-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
-import { Search, Eye, Download } from "lucide-react";
+import { Search, Eye, Download, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { useTranslation } from "react-i18next";
 import { getDateFnsLocale } from "@/lib/date-locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const STATUSES = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"] as const;
 
@@ -26,6 +36,7 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [deleteOrderOpen, setDeleteOrderOpen] = useState(false);
 
   const { data: ordersData } = useListOrders({
     search: search || undefined,
@@ -43,6 +54,21 @@ export default function Orders() {
         queryClient.invalidateQueries({ queryKey: ["/api/orders/stats"] });
         toast({ title: t("admin.orders.toastUpdated") });
         setSelectedOrder(null);
+      },
+    },
+  });
+
+  const deleteMutation = useDeleteOrder({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/orders/stats"] });
+        toast({ title: t("admin.orders.toastOrderDeleted") });
+        setDeleteOrderOpen(false);
+        setSelectedOrder(null);
+      },
+      onError: () => {
+        toast({ title: t("admin.orders.toastDeleteErr"), variant: "destructive" });
       },
     },
   });
@@ -290,11 +316,43 @@ export default function Orders() {
                     {t("admin.orders.saveNotes")}
                   </Button>
                 </div>
+
+                <div className="pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDeleteOrderOpen(true)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4 me-2" />
+                    {t("admin.orders.deleteOrder")}
+                  </Button>
+                </div>
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={deleteOrderOpen} onOpenChange={setDeleteOrderOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("admin.orders.deleteDialogTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("admin.orders.deleteDialogBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>{t("admin.orders.deleteCancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending || !selectedOrder}
+              onClick={() => selectedOrder && deleteMutation.mutate({ id: selectedOrder.id })}
+            >
+              {t("admin.orders.deleteConfirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }

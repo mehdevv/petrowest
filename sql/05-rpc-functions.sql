@@ -117,9 +117,21 @@ BEGIN
 
   v_total := (v_product.price * p_quantity) + v_delivery_price;
 
-  -- Insert order
-  INSERT INTO orders (product_id, customer_name, phone, wilaya_code, wilaya_name, address, quantity, delivery_type, delivery_price, total_price, status)
-  VALUES (p_product_id, p_customer_name, p_phone, p_wilaya_code, v_wilaya_name, p_address, p_quantity, p_delivery_type, v_delivery_price, v_total, 'Pending')
+  -- Insert order (snapshots keep line-item info if product is deleted later)
+  INSERT INTO orders (
+    product_id,
+    product_name_snapshot,
+    product_price_snapshot,
+    product_slug_snapshot,
+    customer_name, phone, wilaya_code, wilaya_name, address, quantity, delivery_type, delivery_price, total_price, status
+  )
+  VALUES (
+    p_product_id,
+    v_product.name,
+    v_product.price,
+    v_product.slug,
+    p_customer_name, p_phone, p_wilaya_code, v_wilaya_name, p_address, p_quantity, p_delivery_type, v_delivery_price, v_total, 'Pending'
+  )
   RETURNING * INTO v_order;
 
   RETURN json_build_object(

@@ -113,7 +113,8 @@ export interface ToggleStockBody {
 
 export interface Order {
   id: number;
-  productId: number;
+  /** @nullable — set when the product was removed from the catalogue */
+  productId: number | null;
   /** @nullable */
   productName?: string | null;
   /** @nullable */

@@ -329,7 +329,14 @@
       "excelColAddress": "Adresse",
       "excelColNotes": "Notes",
       "excelSheet": "Commandes",
-      "excelFilePrefix": "Commandes_PetroWest"
+      "excelFilePrefix": "Commandes_PetroWest",
+      "deleteOrder": "Supprimer la commande",
+      "deleteDialogTitle": "Supprimer cette commande ?",
+      "deleteDialogBody": "La commande sera définitivement supprimée. Cette action est irréversible.",
+      "deleteCancel": "Annuler",
+      "deleteConfirm": "Supprimer",
+      "toastOrderDeleted": "Commande supprimée.",
+      "toastDeleteErr": "Impossible de supprimer la commande."
     },
     "products": {
       "title": "Produits",

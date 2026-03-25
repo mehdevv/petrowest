@@ -329,7 +329,14 @@
       "excelColAddress": "العنوان",
       "excelColNotes": "ملاحظات",
       "excelSheet": "الطلبات",
-      "excelFilePrefix": "طلبات_PetroWest"
+      "excelFilePrefix": "طلبات_PetroWest",
+      "deleteOrder": "حذف الطلب",
+      "deleteDialogTitle": "حذف هذا الطلب؟",
+      "deleteDialogBody": "سيتم حذف الطلب نهائياً من السجلات. لا يمكن التراجع.",
+      "deleteCancel": "إلغاء",
+      "deleteConfirm": "حذف",
+      "toastOrderDeleted": "تم حذف الطلب.",
+      "toastDeleteErr": "تعذّر حذف الطلب."
     },
     "products": {
       "title": "المنتجات",
