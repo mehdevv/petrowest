@@ -11,7 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { useListBrands, useListCategories, useListOilTypes, useCreateProduct, useUpdateProduct, useGetProductById } from "@workspace/api-client-react";
+import {
+  useListBrands,
+  useListCategories,
+  useListOilTypes,
+  useListProductVolumes,
+  useListViscosityGrades,
+  useCreateProduct,
+  useUpdateProduct,
+  useGetProductById,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToImgBB } from "@/lib/imgbb";
@@ -60,6 +69,8 @@ export default function ProductForm() {
   const { data: brands } = useListBrands();
   const { data: categories } = useListCategories();
   const { data: oilTypes } = useListOilTypes();
+  const { data: productVolumes } = useListProductVolumes();
+  const { data: viscosityGrades } = useListViscosityGrades();
   const { data: existingProduct, isLoading: productLoading } = useGetProductById(productId, { query: { enabled: isEdit } });
 
   // Multi-image state
@@ -324,21 +335,88 @@ export default function ProductForm() {
                   </FormItem>
                 )}/>
 
-                <FormField control={form.control} name="volume" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("admin.productForm.volumeLabel")}</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}/>
+                <FormField control={form.control} name="volume" render={({ field }) => {
+                  const volNames = new Set((productVolumes ?? []).map((v) => v.name));
+                  const volOrphan = !!field.value && !volNames.has(field.value);
+                  return (
+                    <FormItem>
+                      <FormLabel>{t("admin.productForm.volumeLabel")}</FormLabel>
+                      {productVolumes && productVolumes.length > 0 ? (
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("admin.productForm.selectVolume")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {volOrphan && (
+                              <SelectItem value={field.value}>
+                                {field.value} ({t("admin.productForm.legacyCatalogValue")})
+                              </SelectItem>
+                            )}
+                            {productVolumes.map((v) => (
+                              <SelectItem key={v.id} value={v.name}>
+                                {v.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <FormControl><Input {...field} placeholder={t("admin.productForm.volumePh")} /></FormControl>
+                      )}
+                      <FormDescription>
+                        {productVolumes && productVolumes.length > 0
+                          ? t("admin.productForm.volumeCatalogHint")
+                          : t("admin.productForm.volumeFreeTextHint")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}/>
 
-                <FormField control={form.control} name="viscosityGrade" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("admin.productForm.viscosityLabel")}</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}/>
+                <FormField control={form.control} name="viscosityGrade" render={({ field }) => {
+                  const visNames = new Set((viscosityGrades ?? []).map((g) => g.name));
+                  const visOrphan = !!field.value && !visNames.has(field.value);
+                  const noneSentinel = "__pw_no_viscosity__";
+                  return (
+                    <FormItem>
+                      <FormLabel>{t("admin.productForm.viscosityLabel")}</FormLabel>
+                      {viscosityGrades && viscosityGrades.length > 0 ? (
+                        <Select
+                          onValueChange={(v) => field.onChange(v === noneSentinel ? "" : v)}
+                          value={field.value ? field.value : noneSentinel}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t("admin.productForm.selectViscosity")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={noneSentinel}>{t("admin.productForm.noneViscosity")}</SelectItem>
+                            {visOrphan && field.value && (
+                              <SelectItem value={field.value}>
+                                {field.value} ({t("admin.productForm.legacyCatalogValue")})
+                              </SelectItem>
+                            )}
+                            {viscosityGrades.map((g) => (
+                              <SelectItem key={g.id} value={g.name}>
+                                {g.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <FormControl><Input {...field} placeholder={t("admin.productForm.viscosityPh")} /></FormControl>
+                      )}
+                      <FormDescription>
+                        {viscosityGrades && viscosityGrades.length > 0
+                          ? t("admin.productForm.viscosityCatalogHint")
+                          : t("admin.productForm.viscosityFreeTextHint")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}/>
 
                 <FormField control={form.control} name="apiStandard" render={({ field }) => (
                   <FormItem className="md:col-span-2">

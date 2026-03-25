@@ -5,6 +5,8 @@ import {
   useListBrands, useCreateBrand, useUpdateBrand, useDeleteBrand,
   useListOilTypes, useCreateOilType, useUpdateOilType, useDeleteOilType,
   useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
+  useListProductVolumes, useCreateProductVolume, useUpdateProductVolume, useDeleteProductVolume,
+  useListViscosityGrades, useCreateViscosityGrade, useUpdateViscosityGrade, useDeleteViscosityGrade,
 } from "@workspace/api-client-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -12,12 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, Plus, X, Check, Tag, Droplets, FolderOpen, Upload, Loader2, ImageIcon } from "lucide-react";
+import { Pencil, Trash2, Plus, X, Check, Tag, Droplets, FolderOpen, Upload, Loader2, ImageIcon, Package, Gauge } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToImgBB } from "@/lib/imgbb";
 
-type TabType = "brands" | "oilTypes" | "categories";
+type TabType = "brands" | "oilTypes" | "categories" | "volumes" | "viscosity";
 
 export default function Catalogue() {
   const { t } = useTranslation();
@@ -28,6 +30,8 @@ export default function Catalogue() {
       { id: "brands" as TabType, label: t("admin.catalogue.tabBrands"), icon: Tag },
       { id: "oilTypes" as TabType, label: t("admin.catalogue.tabOilTypes"), icon: Droplets },
       { id: "categories" as TabType, label: t("admin.catalogue.tabCategories"), icon: FolderOpen },
+      { id: "volumes" as TabType, label: t("admin.catalogue.tabVolumes"), icon: Package },
+      { id: "viscosity" as TabType, label: t("admin.catalogue.tabViscosity"), icon: Gauge },
     ],
     [t]
   );
@@ -60,6 +64,8 @@ export default function Catalogue() {
       {activeTab === "brands" && <BrandsTab />}
       {activeTab === "oilTypes" && <OilTypesTab />}
       {activeTab === "categories" && <CategoriesTab />}
+      {activeTab === "volumes" && <ProductVolumesTab />}
+      {activeTab === "viscosity" && <ViscosityGradesTab />}
     </AdminLayout>
   );
 }
@@ -313,6 +319,270 @@ function OilTypesTab() {
                           <Pencil className="w-4 h-4 text-muted-foreground" />
                         </Button>
                         <Button size="icon" variant="ghost" className="hover:bg-destructive/10 hover:text-destructive" onClick={() => deleteMut.mutate({ id: oilType.id })}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PACK VOLUMES TAB
+// ═══════════════════════════════════════════════════════════
+
+function ProductVolumesTab() {
+  const { t } = useTranslation();
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: rows, isLoading } = useListProductVolumes();
+
+  const createMut = useCreateProductVolume({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/product-volumes"] });
+        setNewName("");
+        toast({ title: t("admin.catalogue.toastVolAdd") });
+      },
+      onError: () => toast({ title: t("admin.catalogue.toastVolErr"), variant: "destructive" }),
+    },
+  });
+
+  const updateMut = useUpdateProductVolume({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/product-volumes"] });
+        setEditingId(null);
+        toast({ title: t("admin.catalogue.toastVolUpd") });
+      },
+    },
+  });
+
+  const deleteMut = useDeleteProductVolume({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/product-volumes"] });
+        toast({ title: t("admin.catalogue.toastVolDel") });
+      },
+      onError: () => toast({ title: t("admin.catalogueVolumes.toastDelErr"), variant: "destructive" }),
+    },
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    createMut.mutate({ data: { name: newName.trim() } });
+  };
+
+  const saveEdit = (id: number) => {
+    if (!editName.trim()) return;
+    updateMut.mutate({ id, data: { name: editName.trim() } });
+  };
+
+  return (
+    <div className="max-w-3xl">
+      <form onSubmit={handleCreate} className="bg-white p-6 rounded-xl border mb-8 flex gap-4 items-end">
+        <div className="flex-1">
+          <label className="text-sm font-bold text-primary mb-2 block uppercase tracking-wider">{t("admin.catalogueVolumes.addLabel")}</label>
+          <Input placeholder={t("admin.catalogueVolumes.placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} className="h-12" />
+        </div>
+        <Button type="submit" className="h-12 px-6 hover-elevate" disabled={createMut.isPending || !newName.trim()}>
+          <Plus className="w-4 h-4 me-2" /> {t("admin.catalogue.add")}
+        </Button>
+      </form>
+
+      <div className="bg-white rounded-xl border overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>
+        ) : !rows?.length ? (
+          <div className="p-8 text-center text-muted-foreground">{t("admin.catalogueVolumes.empty")}</div>
+        ) : (
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead>{t("admin.catalogueVolumes.colName")}</TableHead>
+                <TableHead className="text-center w-32">{t("admin.catalogue.products")}</TableHead>
+                <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    {editingId === row.id ? (
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="max-w-xs h-9"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEdit(row.id); if (e.key === "Escape") setEditingId(null); }}
+                      />
+                    ) : (
+                      <span className="font-medium">{row.name}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="secondary">{row.productCount}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {editingId === row.id ? (
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => saveEdit(row.id)} disabled={updateMut.isPending}>
+                          <Check className="w-4 h-4 text-green-600" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
+                          <X className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => { setEditingId(row.id); setEditName(row.name); }}>
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="hover:bg-destructive/10 hover:text-destructive" onClick={() => deleteMut.mutate({ id: row.id })}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  VISCOSITY GRADES TAB
+// ═══════════════════════════════════════════════════════════
+
+function ViscosityGradesTab() {
+  const { t } = useTranslation();
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: rows, isLoading } = useListViscosityGrades();
+
+  const createMut = useCreateViscosityGrade({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/viscosity-grades"] });
+        setNewName("");
+        toast({ title: t("admin.catalogue.toastVisAdd") });
+      },
+      onError: () => toast({ title: t("admin.catalogue.toastVisErr"), variant: "destructive" }),
+    },
+  });
+
+  const updateMut = useUpdateViscosityGrade({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/viscosity-grades"] });
+        setEditingId(null);
+        toast({ title: t("admin.catalogue.toastVisUpd") });
+      },
+    },
+  });
+
+  const deleteMut = useDeleteViscosityGrade({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/viscosity-grades"] });
+        toast({ title: t("admin.catalogue.toastVisDel") });
+      },
+      onError: () => toast({ title: t("admin.catalogueViscosity.toastDelErr"), variant: "destructive" }),
+    },
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    createMut.mutate({ data: { name: newName.trim() } });
+  };
+
+  const saveEdit = (id: number) => {
+    if (!editName.trim()) return;
+    updateMut.mutate({ id, data: { name: editName.trim() } });
+  };
+
+  return (
+    <div className="max-w-3xl">
+      <form onSubmit={handleCreate} className="bg-white p-6 rounded-xl border mb-8 flex gap-4 items-end">
+        <div className="flex-1">
+          <label className="text-sm font-bold text-primary mb-2 block uppercase tracking-wider">{t("admin.catalogueViscosity.addLabel")}</label>
+          <Input placeholder={t("admin.catalogueViscosity.placeholder")} value={newName} onChange={(e) => setNewName(e.target.value)} className="h-12" />
+        </div>
+        <Button type="submit" className="h-12 px-6 hover-elevate" disabled={createMut.isPending || !newName.trim()}>
+          <Plus className="w-4 h-4 me-2" /> {t("admin.catalogue.add")}
+        </Button>
+      </form>
+
+      <div className="bg-white rounded-xl border overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>
+        ) : !rows?.length ? (
+          <div className="p-8 text-center text-muted-foreground">{t("admin.catalogueViscosity.empty")}</div>
+        ) : (
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead>{t("admin.catalogueViscosity.colName")}</TableHead>
+                <TableHead className="text-center w-32">{t("admin.catalogue.products")}</TableHead>
+                <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    {editingId === row.id ? (
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="max-w-xs h-9"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEdit(row.id); if (e.key === "Escape") setEditingId(null); }}
+                      />
+                    ) : (
+                      <span className="font-medium">{row.name}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="secondary">{row.productCount}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {editingId === row.id ? (
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => saveEdit(row.id)} disabled={updateMut.isPending}>
+                          <Check className="w-4 h-4 text-green-600" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
+                          <X className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => { setEditingId(row.id); setEditName(row.name); }}>
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="hover:bg-destructive/10 hover:text-destructive" onClick={() => deleteMut.mutate({ id: row.id })}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

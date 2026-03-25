@@ -200,6 +200,34 @@ export interface UpdateOilTypeBody {
   name?: string;
 }
 
+export interface ProductVolume {
+  id: number;
+  name: string;
+  productCount: number;
+}
+
+export interface CreateProductVolumeBody {
+  name: string;
+}
+
+export interface UpdateProductVolumeBody {
+  name?: string;
+}
+
+export interface ViscosityGrade {
+  id: number;
+  name: string;
+  productCount: number;
+}
+
+export interface CreateViscosityGradeBody {
+  name: string;
+}
+
+export interface UpdateViscosityGradeBody {
+  name?: string;
+}
+
 export interface Brand {
   id: number;
   name: string;

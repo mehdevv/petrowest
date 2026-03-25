@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2 } from "lucide-react";
+import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2, ChevronDown } from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ui-custom/ProductCard";
@@ -44,7 +44,7 @@ function VehicleFilter() {
   const [yearId, setYearId] = useState<string>("");
   const [searched, setSearched] = useState(false);
 
-  const { data: categories } = useListVehicleCategories();
+  const { data: categories, isPending: categoriesPending } = useListVehicleCategories();
   const { data: brands, isLoading: brandsLoading } = useListVehicleBrands(
     { vehicleCategoryId: Number(categoryId) }, 
     { query: { enabled: !!categoryId } }
@@ -87,13 +87,8 @@ function VehicleFilter() {
 
   const selectedBrand = brands?.find(b => b.id.toString() === brandId);
 
-  const defaultCategories = [
-    { id: "car", name: t("home.categories.car") },
-    { id: "moto", name: t("home.categories.moto") },
-    { id: "truck", name: t("home.categories.truck") },
-  ];
-  const displayCategories = categories?.length ? categories : defaultCategories;
-  const useCategoryDropdown = displayCategories.length > 3;
+  const categoryList = categories ?? [];
+  const useCategoryDropdown = categoryList.length > 3;
 
   return (
     <div className="w-full max-w-6xl mx-auto mt-10">
@@ -106,7 +101,24 @@ function VehicleFilter() {
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
                 {t("home.vehicleType")}
               </label>
-              {useCategoryDropdown ? (
+              {categoriesPending ? (
+                <div
+                  className="flex h-11 w-full cursor-default items-center justify-between whitespace-nowrap rounded-md border border-white/20 bg-primary/80 px-3 py-2 text-sm font-medium shadow-sm select-none [&>span]:line-clamp-1 animate-pulse"
+                  aria-busy="true"
+                  aria-label={t("product.loading")}
+                >
+                  <span className="line-clamp-1 text-white/45">{t("home.selectVehicleType")}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50 text-white/60" />
+                </div>
+              ) : categoryList.length === 0 ? (
+                <div
+                  className="flex h-11 w-full cursor-not-allowed items-center justify-between whitespace-nowrap rounded-md border border-white/20 bg-primary/80 px-3 py-2 text-sm font-medium opacity-60 shadow-sm [&>span]:line-clamp-1"
+                  aria-disabled
+                >
+                  <span className="line-clamp-1 text-white/50">{t("home.selectVehicleType")}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 opacity-50 text-white/60" />
+                </div>
+              ) : useCategoryDropdown ? (
                 <Select
                   value={categoryId || undefined}
                   onValueChange={(val) => {
@@ -118,7 +130,7 @@ function VehicleFilter() {
                     <SelectValue placeholder={t("home.selectVehicleType")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {displayCategories.map((cat) => (
+                    {categoryList.map((cat) => (
                       <SelectItem key={String(cat.id)} value={cat.id.toString()}>
                         {cat.name}
                       </SelectItem>
@@ -127,7 +139,7 @@ function VehicleFilter() {
                 </Select>
               ) : (
                 <div className="flex h-11 rounded-md overflow-hidden border border-white/20">
-                  {displayCategories.map((cat, i) => (
+                  {categoryList.map((cat, i) => (
                     <button
                       key={cat.id}
                       type="button"

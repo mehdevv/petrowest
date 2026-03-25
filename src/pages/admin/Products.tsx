@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Search, PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { Search, PlusCircle, Pencil, Trash2, Star } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -81,6 +81,7 @@ export default function Products() {
                 <TableHead>{t("admin.products.colCategory")}</TableHead>
                 <TableHead>{t("admin.products.colPrice")}</TableHead>
                 <TableHead className="text-center">{t("admin.products.colStock")}</TableHead>
+                <TableHead className="text-center w-[4.5rem]">{t("admin.products.colFeatured")}</TableHead>
                 <TableHead className="text-end">{t("admin.products.colActions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -110,6 +111,21 @@ export default function Products() {
                       disabled={toggleMutation.isPending}
                     />
                   </TableCell>
+                  <TableCell className="text-center align-middle">
+                    {product.featured ? (
+                      <span
+                        className="inline-flex justify-center"
+                        title={t("admin.products.featuredOnHomeTooltip")}
+                      >
+                        <Star
+                          className="h-4 w-4 shrink-0 fill-secondary text-secondary"
+                          aria-label={t("admin.products.featuredOnHomeTooltip")}
+                        />
+                      </span>
+                    ) : (
+                      <span className="inline-block w-4 h-4" aria-hidden />
+                    )}
+                  </TableCell>
                   <TableCell className="text-end">
                     <div className="flex justify-end gap-2">
                       <Button asChild variant="ghost" size="icon" className="hover:text-primary">
@@ -131,7 +147,7 @@ export default function Products() {
               ))}
               {productsData?.products.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {t("admin.products.noResults")}
                   </TableCell>
                 </TableRow>

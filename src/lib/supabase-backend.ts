@@ -571,6 +571,110 @@ export async function handleApiRoute(
   }
 
   // ═══════════════════════════════════════════════════════
+  //  PRODUCT VOLUMES (pack sizes)
+  // ═══════════════════════════════════════════════════════
+
+  if (method === "GET" && path === "/api/product-volumes") {
+    const { data, error } = await supabase
+      .from("product_volumes")
+      .select("id, name")
+      .order("name");
+    if (error) throw new RouteError(500, error.message);
+
+    const { data: products } = await supabase.from("products").select("volume");
+    const countMap: Record<string, number> = {};
+    (products || []).forEach((p: any) => {
+      if (p.volume) countMap[p.volume] = (countMap[p.volume] || 0) + 1;
+    });
+
+    const result = (data || []).map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      productCount: countMap[row.name] || 0,
+    }));
+    return { data: result, status: 200 };
+  }
+
+  if (method === "POST" && path === "/api/product-volumes") {
+    const { data, error } = await supabase
+      .from("product_volumes")
+      .insert({ name: body.name })
+      .select()
+      .single();
+    if (error) throw new RouteError(500, error.message);
+    return { data: { id: data.id, name: data.name, productCount: 0 }, status: 201 };
+  }
+
+  if (method === "PATCH" && (m = match(path, "/api/product-volumes/:id"))) {
+    const { data, error } = await supabase
+      .from("product_volumes")
+      .update({ name: body.name })
+      .eq("id", Number(m.id))
+      .select()
+      .single();
+    if (error) throw new RouteError(500, error.message);
+    return { data: { id: data.id, name: data.name, productCount: 0 }, status: 200 };
+  }
+
+  if (method === "DELETE" && (m = match(path, "/api/product-volumes/:id"))) {
+    const { error } = await supabase.from("product_volumes").delete().eq("id", Number(m.id));
+    if (error) throw new RouteError(500, error.message);
+    return { data: null, status: 204 };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  VISCOSITY GRADES
+  // ═══════════════════════════════════════════════════════
+
+  if (method === "GET" && path === "/api/viscosity-grades") {
+    const { data, error } = await supabase
+      .from("viscosity_grades")
+      .select("id, name")
+      .order("name");
+    if (error) throw new RouteError(500, error.message);
+
+    const { data: products } = await supabase.from("products").select("viscosity_grade");
+    const countMap: Record<string, number> = {};
+    (products || []).forEach((p: any) => {
+      if (p.viscosity_grade) countMap[p.viscosity_grade] = (countMap[p.viscosity_grade] || 0) + 1;
+    });
+
+    const result = (data || []).map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      productCount: countMap[row.name] || 0,
+    }));
+    return { data: result, status: 200 };
+  }
+
+  if (method === "POST" && path === "/api/viscosity-grades") {
+    const { data, error } = await supabase
+      .from("viscosity_grades")
+      .insert({ name: body.name })
+      .select()
+      .single();
+    if (error) throw new RouteError(500, error.message);
+    return { data: { id: data.id, name: data.name, productCount: 0 }, status: 201 };
+  }
+
+  if (method === "PATCH" && (m = match(path, "/api/viscosity-grades/:id"))) {
+    const { data, error } = await supabase
+      .from("viscosity_grades")
+      .update({ name: body.name })
+      .eq("id", Number(m.id))
+      .select()
+      .single();
+    if (error) throw new RouteError(500, error.message);
+    return { data: { id: data.id, name: data.name, productCount: 0 }, status: 200 };
+  }
+
+  if (method === "DELETE" && (m = match(path, "/api/viscosity-grades/:id"))) {
+    const { error } = await supabase.from("viscosity_grades").delete().eq("id", Number(m.id));
+    if (error) throw new RouteError(500, error.message);
+    return { data: null, status: 204 };
+  }
+
+  // ═══════════════════════════════════════════════════════
   //  VEHICLE CATEGORIES
   // ═══════════════════════════════════════════════════════
 
