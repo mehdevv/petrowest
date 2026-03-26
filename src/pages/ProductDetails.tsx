@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -356,44 +356,38 @@ export default function ProductDetails() {
                   ) => {
                     const filtered = rows.filter((r) => (r.name || r.specification || "").trim());
                     return (
-                      <div className="flex min-w-0 flex-col">
+                      <div className="flex min-w-0 flex-col gap-0.5 sm:gap-1">
                         {filtered.map((r, i) => {
                           const name = r.name?.trim() ?? "";
                           const spec = r.specification?.trim() ?? "";
                           return (
-                            <Fragment key={i}>
-                              {i > 0 ? (
-                                <span
-                                  aria-hidden
-                                  role="presentation"
-                                  className="my-2 sm:my-2.5 block h-px w-full shrink-0 bg-gradient-to-r from-transparent via-border/45 to-transparent"
-                                />
+                            <p
+                              key={i}
+                              className="min-w-0 max-w-full break-words text-[11px] sm:text-sm md:text-base leading-relaxed [overflow-wrap:anywhere]"
+                            >
+                              {name ? (
+                                <span className="font-semibold text-primary">
+                                  <SpecRichTextSegments text={name} />
+                                </span>
                               ) : null}
-                              <p className="min-w-0 max-w-full break-words text-[11px] sm:text-sm md:text-base leading-relaxed [overflow-wrap:anywhere]">
-                                {name ? (
-                                  <span className="font-semibold text-primary">
-                                    <SpecRichTextSegments text={name} />
-                                  </span>
-                                ) : null}
-                                {name && spec ? (
-                                  <span className="ms-1.5 sm:ms-2 text-muted-foreground [overflow-wrap:anywhere]">
-                                    <SpecRichTextSegments text={spec} />
-                                  </span>
-                                ) : spec ? (
-                                  <span
-                                    className={
-                                      name
-                                        ? "text-muted-foreground"
-                                        : "text-primary font-medium"
-                                    }
-                                  >
-                                    <SpecRichTextSegments text={spec} />
-                                  </span>
-                                ) : !name ? (
-                                  "—"
-                                ) : null}
-                              </p>
-                            </Fragment>
+                              {name && spec ? (
+                                <span className="ms-0.5 text-muted-foreground [overflow-wrap:anywhere]">
+                                  <SpecRichTextSegments text={spec} />
+                                </span>
+                              ) : spec ? (
+                                <span
+                                  className={
+                                    name
+                                      ? "text-muted-foreground"
+                                      : "text-primary font-medium"
+                                  }
+                                >
+                                  <SpecRichTextSegments text={spec} />
+                                </span>
+                              ) : !name ? (
+                                "—"
+                              ) : null}
+                            </p>
                           );
                         })}
                       </div>
@@ -401,25 +395,25 @@ export default function ProductDetails() {
                   };
 
                   return (
-                    <div className="rounded-xl border bg-white p-3 sm:p-6 mb-5 sm:mb-8">
+                    <div className="rounded-xl border bg-white p-3 sm:p-5 mb-5 sm:mb-8">
                       <div
                         className={
                           hasApi && hasHomo
-                            ? "grid grid-cols-2 gap-2.5 sm:gap-8 sm:gap-x-10"
+                            ? "grid grid-cols-2 gap-1.5 sm:gap-4 sm:gap-x-5"
                             : "grid grid-cols-1"
                         }
                       >
                         {hasApi && (
-                          <div className="space-y-2 sm:space-y-3 min-w-0 break-words">
-                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary border-b border-primary/15 pb-1.5 sm:pb-2 leading-tight">
+                          <div className="space-y-0.5 sm:space-y-1 min-w-0 break-words">
+                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary leading-tight">
                               {t("product.specificationsColumn")}
                             </h4>
                             <div>{renderSpecLines(apiRows)}</div>
                           </div>
                         )}
                         {hasHomo && (
-                          <div className="space-y-2 sm:space-y-3 min-w-0 break-words">
-                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary border-b border-primary/15 pb-1.5 sm:pb-2 leading-tight">
+                          <div className="space-y-0.5 sm:space-y-1 min-w-0 break-words">
+                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary leading-tight">
                               {t("product.tableHomologation")}
                             </h4>
                             <div>{renderSpecLines(homoRows)}</div>

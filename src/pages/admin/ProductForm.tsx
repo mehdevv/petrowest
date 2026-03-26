@@ -80,7 +80,7 @@ function ProductSpecRowsEditor(props: {
   };
 
   return (
-    <div className="md:col-span-2 space-y-3 rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+    <div className="md:col-span-2 space-y-1.5 rounded-xl border border-gray-200 bg-gray-50/50 p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h4 className="font-display text-lg text-primary">{title}</h4>
@@ -126,7 +126,7 @@ function ProductSpecRowsEditor(props: {
           <TableHeader>
             <TableRow className="bg-white">
               <TableHead className="min-w-0">
-                <div className="flex flex-row flex-wrap gap-x-4 gap-y-1 pe-2">
+                <div className="flex flex-row flex-wrap gap-x-3 gap-y-0.5 pe-2">
                   <span className="min-w-0 flex-1 basis-[min(100%,12rem)] font-medium">
                     {t("admin.productForm.colSpecName")}
                   </span>
@@ -138,11 +138,11 @@ function ProductSpecRowsEditor(props: {
               <TableHead className="w-12 text-end">{t("admin.catalogue.actions")}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="[&_tr:not(:first-child)_td]:border-t [&_tr:not(:first-child)_td]:border-border/25">
+          <TableBody className="[&_tr]:border-b-0">
             {rows.map((row, index) => (
               <TableRow key={index} className="border-b-0 bg-white">
                 <TableCell className="align-top min-w-0 max-w-[min(100vw-4rem,56rem)]">
-                  <div className="flex flex-row flex-wrap items-start gap-x-3 gap-y-2 min-w-0">
+                  <div className="flex flex-row flex-wrap items-start gap-x-1.5 gap-y-0.5 min-w-0">
                     <div className="min-w-0 flex-1 basis-[min(100%,14rem)]">
                       <SpecRichInput
                         value={row.name}

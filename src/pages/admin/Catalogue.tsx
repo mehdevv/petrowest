@@ -860,7 +860,7 @@ function SpecDefaultsTab() {
         <label className="text-sm font-bold text-primary mb-4 block uppercase tracking-wider">
           {t("admin.catalogue.specDefaultsAddSection")}
         </label>
-        <div className="flex flex-row flex-wrap items-end gap-x-4 gap-y-3">
+        <div className="flex flex-row flex-wrap items-end gap-x-3 gap-y-2">
           <div className="min-w-0 flex-1 basis-[min(100%,18rem)]">
             <label className="text-xs text-muted-foreground mb-1 block">{t("admin.productForm.colSpecName")}</label>
             <SpecRichInput
@@ -902,7 +902,7 @@ function SpecDefaultsTab() {
             <TableHeader className="bg-gray-50">
               <TableRow>
                 <TableHead className="min-w-0">
-                  <div className="flex flex-row flex-wrap gap-x-4 gap-y-1 pe-2">
+                  <div className="flex flex-row flex-wrap gap-x-3 gap-y-0.5 pe-2">
                     <span className="min-w-0 flex-1 basis-[min(100%,12rem)]">
                       {t("admin.productForm.colSpecName")}
                     </span>
@@ -914,12 +914,12 @@ function SpecDefaultsTab() {
                 <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="[&_tr:not(:first-child)_td]:border-t [&_tr:not(:first-child)_td]:border-border/25">
+            <TableBody className="[&_tr]:border-b-0">
               {rows.map((row) => (
                 <TableRow key={row.id} className="border-b-0">
                   <TableCell className="min-w-0 max-w-[min(100vw-4rem,56rem)] align-top">
                     {editingId === row.id ? (
-                      <div className="flex flex-row flex-wrap items-start gap-x-3 gap-y-2 min-w-0">
+                      <div className="flex flex-row flex-wrap items-start gap-x-1.5 gap-y-0.5 min-w-0">
                         <div className="min-w-0 flex-1 basis-[min(100%,14rem)]">
                           <SpecRichInput
                             value={editName}
@@ -952,7 +952,7 @@ function SpecDefaultsTab() {
                           </span>
                         ) : null}
                         {row.name && row.specification ? (
-                          <span className="ms-2 text-muted-foreground [overflow-wrap:anywhere]">
+                          <span className="ms-0.5 text-muted-foreground [overflow-wrap:anywhere]">
                             <SpecRichTextSegments text={row.specification} />
                           </span>
                         ) : row.specification ? (
