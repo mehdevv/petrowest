@@ -206,8 +206,8 @@ export default function ProductForm() {
 
                 <FormField control={form.control} name="apiStandard" render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>API / ACEA Standards</FormLabel>
-                    <FormControl><Input {...field} placeholder="API SN, ACEA C3..." /></FormControl>
+                    <FormLabel>Specifications (legacy single line)</FormLabel>
+                    <FormControl><Input {...field} placeholder="e.g. API SN, ACEA C3…" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}/>

@@ -18,6 +18,35 @@ export interface SuccessResponse {
   message?: string;
 }
 
+export interface ProductSpecRow {
+  name: string;
+  specification: string;
+}
+
+export type CatalogueSpecType = "api_acea" | "homologation";
+
+export interface CatalogueSpecDefault {
+  id: number;
+  specType: CatalogueSpecType;
+  name: string;
+  specification: string;
+  sortOrder: number;
+  createdAt?: string;
+}
+
+export interface CreateCatalogueSpecDefaultBody {
+  specType: CatalogueSpecType;
+  name?: string;
+  specification?: string;
+  sortOrder?: number;
+}
+
+export interface UpdateCatalogueSpecDefaultBody {
+  name?: string;
+  specification?: string;
+  sortOrder?: number;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -37,6 +66,10 @@ export interface Product {
   description: string;
   /** @nullable */
   apiStandard?: string | null;
+  /** Specifications (name + spec rows) — shown on product page; content is free-form */
+  apiAceaRows?: ProductSpecRow[];
+  /** Les homologations — table rows on product page */
+  homologationRows?: ProductSpecRow[];
   images: string[];
   compatibleVehicleTypes: string[];
   inStock: boolean;
@@ -70,6 +103,8 @@ export interface CreateProductBody {
   description: string;
   /** @nullable */
   apiStandard?: string | null;
+  apiAceaRows?: ProductSpecRow[];
+  homologationRows?: ProductSpecRow[];
   images?: string[];
   compatibleVehicleTypes?: string[];
   inStock?: boolean;
@@ -95,6 +130,8 @@ export interface UpdateProductBody {
   description?: string;
   /** @nullable */
   apiStandard?: string | null;
+  apiAceaRows?: ProductSpecRow[];
+  homologationRows?: ProductSpecRow[];
   images?: string[];
   compatibleVehicleTypes?: string[];
   inStock?: boolean;

@@ -7,9 +7,14 @@ import * as z from "zod";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import {
   useListBrands,
@@ -20,12 +25,26 @@ import {
   useCreateProduct,
   useUpdateProduct,
   useGetProductById,
+  useListCatalogueSpecDefaults,
 } from "@workspace/api-client-react";
+import type { ProductSpecRow } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { uploadToImgBB } from "@/lib/imgbb";
 import { uploadProductPdf } from "@/lib/upload-pdf";
-import { ArrowLeft, Upload, Camera, X, Loader2, ImageIcon, Plus, GripVertical, FileText, ShieldCheck } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { SpecRichInput } from "@/components/admin/SpecRichInput";
+import { ArrowLeft, Upload, Camera, X, Loader2, ImageIcon, Plus, GripVertical, FileText, ShieldCheck, Trash2 } from "lucide-react";
+
+/** Stored in DB (column NOT NULL); hidden from admin and storefront. */
+const PRODUCT_DESCRIPTION_PLACEHOLDER = "—";
 
 function slugify(name: string): string {
   return name
@@ -34,6 +53,119 @@ function slugify(name: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "") || "product";
+}
+
+type SpecDefaultLite = { id: number; name: string; specification: string };
+
+function ProductSpecRowsEditor(props: {
+  title: string;
+  hint?: string;
+  rows: ProductSpecRow[];
+  setRows: React.Dispatch<React.SetStateAction<ProductSpecRow[]>>;
+  defaults: SpecDefaultLite[] | undefined;
+}) {
+  const { t } = useTranslation();
+  const { title, hint, rows, setRows, defaults } = props;
+
+  const updateRow = (index: number, field: keyof ProductSpecRow, value: string) => {
+    setRows((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const removeRow = (index: number) => {
+    setRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="md:col-span-2 space-y-3 rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h4 className="font-display text-lg text-primary">{title}</h4>
+          {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="sm" disabled={!defaults?.length}>
+                {t("admin.productForm.addFromCatalogue")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto">
+              {(defaults ?? []).map((d) => (
+                <DropdownMenuItem
+                  key={d.id}
+                  onSelect={() =>
+                    setRows((r) => [...r, { name: d.name, specification: d.specification }])
+                  }
+                >
+                  {d.name && d.specification
+                    ? `${d.name} — ${d.specification}`
+                    : d.name || d.specification || `— #${d.id}`}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setRows((r) => [...r, { name: "", specification: "" }])}
+          >
+            <Plus className="h-4 w-4 me-1" />
+            {t("admin.productForm.addSpecRow")}
+          </Button>
+        </div>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">{t("admin.productForm.specRowsEmpty")}</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-white">
+              <TableHead className="w-[36%]">{t("admin.productForm.colSpecName")}</TableHead>
+              <TableHead>{t("admin.productForm.colSpecification")}</TableHead>
+              <TableHead className="w-12 text-end">{t("admin.catalogue.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, index) => (
+              <TableRow key={index} className="bg-white">
+                <TableCell className="align-top">
+                  <SpecRichInput
+                    value={row.name}
+                    onChange={(v) => updateRow(index, "name", v)}
+                    placeholder={t("admin.productForm.colSpecName")}
+                  />
+                </TableCell>
+                <TableCell className="align-top">
+                  <SpecRichInput
+                    value={row.specification}
+                    onChange={(v) => updateRow(index, "specification", v)}
+                    placeholder={t("admin.productForm.colSpecification")}
+                  />
+                </TableCell>
+                <TableCell className="text-end align-top">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => removeRow(index)}
+                    aria-label={t("admin.productForm.removeSpecRow")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
 }
 
 function buildProductSchema(t: (k: string) => string) {
@@ -45,8 +177,6 @@ function buildProductSchema(t: (k: string) => string) {
     viscosityGrade: z.string().optional(),
     volume: z.string().min(1, t("admin.productForm.errors.volume")),
     price: z.coerce.number().min(0, t("admin.productForm.errors.price")),
-    description: z.string().min(5, t("admin.productForm.errors.description")),
-    apiStandard: z.string().optional(),
     images: z.array(z.string()).optional(),
     metaPixelId: z.string().optional(),
     inStock: z.boolean().default(true),
@@ -72,6 +202,11 @@ export default function ProductForm() {
   const { data: productVolumes } = useListProductVolumes();
   const { data: viscosityGrades } = useListViscosityGrades();
   const { data: existingProduct, isLoading: productLoading } = useGetProductById(productId, { query: { enabled: isEdit } });
+  const { data: defaultsApiAcea } = useListCatalogueSpecDefaults("api_acea");
+  const { data: defaultsHomologation } = useListCatalogueSpecDefaults("homologation");
+
+  const [apiAceaRows, setApiAceaRows] = useState<ProductSpecRow[]>([]);
+  const [homologationRows, setHomologationRows] = useState<ProductSpecRow[]>([]);
 
   // Multi-image state
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null); // null means "new slot"
@@ -98,8 +233,6 @@ export default function ProductForm() {
       viscosityGrade: "",
       volume: "",
       price: 0,
-      description: "",
-      apiStandard: "",
       images: [],
       metaPixelId: "",
       inStock: true,
@@ -121,13 +254,23 @@ export default function ProductForm() {
         viscosityGrade: existingProduct.viscosityGrade || "",
         volume: existingProduct.volume,
         price: existingProduct.price,
-        description: existingProduct.description,
-        apiStandard: existingProduct.apiStandard || "",
         images: existingImages,
         metaPixelId: existingProduct.metaPixelId || "",
         inStock: existingProduct.inStock,
         featured: existingProduct.featured
       });
+      const apiRows = existingProduct.apiAceaRows?.length
+        ? existingProduct.apiAceaRows.map((r) => ({ name: r.name, specification: r.specification }))
+        : existingProduct.apiStandard
+          ? [{ name: "", specification: existingProduct.apiStandard }]
+          : [];
+      setApiAceaRows(apiRows);
+      setHomologationRows(
+        (existingProduct.homologationRows ?? []).map((r) => ({
+          name: r.name,
+          specification: r.specification,
+        }))
+      );
     }
   }, [existingProduct, isEdit, form]);
 
@@ -237,10 +380,16 @@ export default function ProductForm() {
   const onSubmit = (data: ProductFormValues) => {
     const payload = {
       ...data,
+      description:
+        isEdit && existingProduct
+          ? existingProduct.description
+          : PRODUCT_DESCRIPTION_PLACEHOLDER,
       images,
       metaPixelId: data.metaPixelId?.trim() ? data.metaPixelId.trim() : null,
       securitySheetUrl: securitySheetUrl || null,
       technicalSheetUrl: technicalSheetUrl || null,
+      apiAceaRows,
+      homologationRows,
     };
     if (isEdit) {
       updateMutation.mutate({ id: productId, data: payload });
@@ -418,21 +567,20 @@ export default function ProductForm() {
                   );
                 }}/>
 
-                <FormField control={form.control} name="apiStandard" render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>{t("admin.productForm.apiLabel")}</FormLabel>
-                    <FormControl><Input {...field} placeholder={`${t("admin.productForm.apiPh")}…`} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}/>
-                
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>{t("admin.productForm.description")}</FormLabel>
-                    <FormControl><Textarea className="min-h-[120px]" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}/>
+                <ProductSpecRowsEditor
+                  title={t("admin.productForm.sectionSpecifications")}
+                  hint={t("admin.productForm.specTableHint")}
+                  rows={apiAceaRows}
+                  setRows={setApiAceaRows}
+                  defaults={defaultsApiAcea}
+                />
+                <ProductSpecRowsEditor
+                  title={t("admin.productForm.sectionHomologation")}
+                  hint={t("admin.productForm.specTableHintHomologation")}
+                  rows={homologationRows}
+                  setRows={setHomologationRows}
+                  defaults={defaultsHomologation}
+                />
               </div>
             </div>
 

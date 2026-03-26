@@ -304,7 +304,6 @@ function VehicleFilter() {
                         <span className="text-green-600 font-bold text-xs uppercase tracking-widest">{t("home.perfectMatch")}</span>
                       </div>
                       <h3 className="font-display text-3xl text-primary leading-none mb-2">{product.name}</h3>
-                      <p className="text-muted-foreground text-sm mb-3">{product.description?.substring(0, 100)}...</p>
                       <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
                         <span className="font-display text-3xl text-primary font-bold">
                           {product.price?.toLocaleString()} <span className="text-lg text-muted-foreground">DA</span>

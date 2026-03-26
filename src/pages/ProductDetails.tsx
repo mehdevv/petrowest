@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useGetProduct, useGetDeliveryPrice, useCreateOrder } from "@workspace/api-client-react";
+import { SpecRichTextSegments } from "@/components/admin/SpecRichTextSegments";
 import { ALGERIA_WILAYAS } from "@/lib/constants";
 import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart, Building2, Home, FileText, Download } from "lucide-react";
 
@@ -338,7 +339,75 @@ export default function ProductDetails() {
                 <div className="font-display text-3xl sm:text-5xl font-bold text-primary mb-5 sm:mb-8 border-b pb-5 sm:pb-8">
                   {product.price.toLocaleString()} <span className="text-lg sm:text-2xl text-muted-foreground">DA</span>
                 </div>
-                <p className="text-sm sm:text-lg leading-relaxed text-gray-700 mb-5 sm:mb-8">{product.description}</p>
+                {(() => {
+                  const apiRows =
+                    product.apiAceaRows && product.apiAceaRows.length > 0
+                      ? product.apiAceaRows
+                      : product.apiStandard
+                        ? [{ name: "", specification: product.apiStandard }]
+                        : [];
+                  const homoRows = product.homologationRows ?? [];
+                  const hasApi = apiRows.some((r) => (r.name || r.specification || "").trim());
+                  const hasHomo = homoRows.some((r) => (r.name || r.specification || "").trim());
+                  if (!hasApi && !hasHomo) return null;
+
+                  const renderSpecLines = (
+                    rows: { name?: string | null; specification?: string | null }[]
+                  ) =>
+                    rows
+                      .filter((r) => (r.name || r.specification || "").trim())
+                      .map((r, i) => {
+                        const name = r.name?.trim() ?? "";
+                        const spec = r.specification?.trim() ?? "";
+                        return (
+                          <div key={i} className="space-y-0.5 sm:space-y-1">
+                            {name ? (
+                              <p className="font-semibold text-primary leading-snug text-xs sm:text-sm">
+                                <SpecRichTextSegments text={name} />
+                              </p>
+                            ) : null}
+                            <p
+                              className={
+                                name
+                                  ? "text-muted-foreground text-[11px] sm:text-sm md:text-base leading-relaxed"
+                                  : "text-primary font-medium text-xs sm:text-sm md:text-base leading-relaxed"
+                              }
+                            >
+                              {spec ? <SpecRichTextSegments text={spec} /> : "—"}
+                            </p>
+                          </div>
+                        );
+                      });
+
+                  return (
+                    <div className="rounded-xl border bg-white p-3 sm:p-6 mb-5 sm:mb-8">
+                      <div
+                        className={
+                          hasApi && hasHomo
+                            ? "grid grid-cols-2 gap-2.5 sm:gap-8 sm:gap-x-10"
+                            : "grid grid-cols-1"
+                        }
+                      >
+                        {hasApi && (
+                          <div className="space-y-2 sm:space-y-3 min-w-0 break-words">
+                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary border-b border-primary/15 pb-1.5 sm:pb-2 leading-tight">
+                              {t("product.specificationsColumn")}
+                            </h4>
+                            <div className="space-y-3 sm:space-y-4">{renderSpecLines(apiRows)}</div>
+                          </div>
+                        )}
+                        {hasHomo && (
+                          <div className="space-y-2 sm:space-y-3 min-w-0 break-words">
+                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary border-b border-primary/15 pb-1.5 sm:pb-2 leading-tight">
+                              {t("product.tableHomologation")}
+                            </h4>
+                            <div className="space-y-3 sm:space-y-4">{renderSpecLines(homoRows)}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {(product.securitySheetUrl || product.technicalSheetUrl) && (
                   <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-5 sm:mb-8">
                     {product.securitySheetUrl && (
@@ -395,10 +464,9 @@ export default function ProductDetails() {
                     )}
                   </div>
                 )}
-                <div className="grid grid-cols-3 gap-2 sm:gap-y-4 sm:gap-x-8 mb-5 sm:mb-8 bg-gray-50 p-3 sm:p-6 rounded-xl border">
+                <div className="grid grid-cols-2 gap-2 sm:gap-y-4 sm:gap-x-8 mb-5 sm:mb-8 bg-gray-50 p-3 sm:p-6 rounded-xl border">
                   <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">{t("product.volume")}</span><strong className="text-primary text-xs sm:text-lg">{product.volume}</strong></div>
                   <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">{t("product.viscosity")}</span><strong className="text-primary text-xs sm:text-lg">{product.viscosityGrade || t("product.na")}</strong></div>
-                  <div><span className="text-muted-foreground block text-[10px] sm:text-sm mb-0.5">{t("product.apiNorm")}</span><strong className="text-primary text-xs sm:text-lg">{product.apiStandard || t("product.na")}</strong></div>
                 </div>
                 <div className="space-y-2 sm:space-y-4 pt-3 sm:pt-4 border-t">
                   <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium text-primary"><ShieldCheck className="text-secondary w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"/> {t("product.authentic")}</div>

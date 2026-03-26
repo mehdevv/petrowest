@@ -67,6 +67,73 @@ function transformProduct(row: any) {
   };
 }
 
+type ProductSpecType = "api_acea" | "homologation";
+
+function transformCatalogueSpecDefault(row: any) {
+  return {
+    id: row.id,
+    specType: row.spec_type as ProductSpecType,
+    name: row.name ?? "",
+    specification: row.specification ?? "",
+    sortOrder: row.sort_order ?? 0,
+    createdAt: row.created_at,
+  };
+}
+
+function mapProductSpecRows(data: any[] | null) {
+  const rows = data || [];
+  const apiAceaRows = rows
+    .filter((r) => r.spec_type === "api_acea")
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((r) => ({ name: r.name ?? "", specification: r.specification ?? "" }));
+  const homologationRows = rows
+    .filter((r) => r.spec_type === "homologation")
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((r) => ({ name: r.name ?? "", specification: r.specification ?? "" }));
+  return { apiAceaRows, homologationRows };
+}
+
+async function fetchProductSpecRows(supabase: any, productId: number) {
+  const { data, error } = await supabase
+    .from("product_spec_rows")
+    .select("spec_type, name, specification, sort_order")
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true });
+  if (error) throw new RouteError(500, error.message);
+  return mapProductSpecRows(data);
+}
+
+async function mergeProductWithSpecRows(supabase: any, row: any) {
+  const base = transformProduct(row);
+  const { apiAceaRows, homologationRows } = await fetchProductSpecRows(supabase, row.id);
+  return { ...base, apiAceaRows, homologationRows };
+}
+
+async function replaceProductSpecRowsOfType(
+  supabase: any,
+  productId: number,
+  specType: ProductSpecType,
+  rows: { name?: string; specification?: string }[] | undefined
+) {
+  if (rows === undefined) return;
+  const { error: delErr } = await supabase
+    .from("product_spec_rows")
+    .delete()
+    .eq("product_id", productId)
+    .eq("spec_type", specType);
+  if (delErr) throw new RouteError(500, delErr.message);
+  if (!rows.length) return;
+  const payload = rows.map((r, i) => ({
+    product_id: productId,
+    spec_type: specType,
+    name: (r.name ?? "").trim(),
+    specification: (r.specification ?? "").trim(),
+    sort_order: i,
+  }));
+  const { error: insErr } = await supabase.from("product_spec_rows").insert(payload);
+  if (insErr) throw new RouteError(500, insErr.message);
+}
+
 /** Transform an order row (with joined product) to API shape */
 function transformOrder(row: any) {
   return {
@@ -241,7 +308,15 @@ export async function handleApiRoute(
       .select("*, brands!brand_id(name), categories!category_id(name)")
       .single();
     if (error) throw new RouteError(500, error.message);
-    return { data: transformProduct(data), status: 201 };
+    const pid = data.id;
+    if (Array.isArray(body.apiAceaRows)) {
+      await replaceProductSpecRowsOfType(supabase, pid, "api_acea", body.apiAceaRows);
+    }
+    if (Array.isArray(body.homologationRows)) {
+      await replaceProductSpecRowsOfType(supabase, pid, "homologation", body.homologationRows);
+    }
+    const merged = await mergeProductWithSpecRows(supabase, data);
+    return { data: merged, status: 201 };
   }
 
   // Get product by slug
@@ -253,7 +328,8 @@ export async function handleApiRoute(
       .maybeSingle();
     if (error) throw new RouteError(500, error.message);
     if (!data) throw new RouteError(404, "Product not found");
-    return { data: transformProduct(data), status: 200 };
+    const merged = await mergeProductWithSpecRows(supabase, data);
+    return { data: merged, status: 200 };
   }
 
   // Toggle product stock
@@ -277,7 +353,8 @@ export async function handleApiRoute(
       .maybeSingle();
     if (error) throw new RouteError(500, error.message);
     if (!data) throw new RouteError(404, "Product not found");
-    return { data: transformProduct(data), status: 200 };
+    const merged = await mergeProductWithSpecRows(supabase, data);
+    return { data: merged, status: 200 };
   }
 
   // Update product by ID
@@ -301,14 +378,22 @@ export async function handleApiRoute(
     if (body.metaPixelId !== undefined) updates.meta_pixel_id = body.metaPixelId;
     updates.updated_at = new Date().toISOString();
 
+    const pid = Number(m.id);
     const { data, error } = await supabase
       .from("products")
       .update(updates)
-      .eq("id", Number(m.id))
+      .eq("id", pid)
       .select("*, brands!brand_id(name), categories!category_id(name)")
       .single();
     if (error) throw new RouteError(500, error.message);
-    return { data: transformProduct(data), status: 200 };
+    if (body.apiAceaRows !== undefined) {
+      await replaceProductSpecRowsOfType(supabase, pid, "api_acea", body.apiAceaRows);
+    }
+    if (body.homologationRows !== undefined) {
+      await replaceProductSpecRowsOfType(supabase, pid, "homologation", body.homologationRows);
+    }
+    const merged = await mergeProductWithSpecRows(supabase, data);
+    return { data: merged, status: 200 };
   }
 
   // Delete product by ID
@@ -579,6 +664,63 @@ export async function handleApiRoute(
 
   if (method === "DELETE" && (m = match(path, "/api/oil-types/:id"))) {
     const { error } = await supabase.from("oil_types").delete().eq("id", Number(m.id));
+    if (error) throw new RouteError(500, error.message);
+    return { data: null, status: 204 };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  CATALOGUE SPEC DEFAULTS (specifications + homologations)
+  // ═══════════════════════════════════════════════════════
+
+  if (method === "GET" && path === "/api/catalogue/spec-defaults") {
+    let qry = supabase.from("catalogue_spec_defaults").select("*").order("sort_order", { ascending: true });
+    const st = q.type;
+    if (st === "api_acea" || st === "homologation") {
+      qry = qry.eq("spec_type", st);
+    }
+    const { data, error } = await qry;
+    if (error) throw new RouteError(500, error.message);
+    return { data: (data || []).map(transformCatalogueSpecDefault), status: 200 };
+  }
+
+  if (method === "POST" && path === "/api/catalogue/spec-defaults") {
+    const specType = body.specType;
+    if (specType !== "api_acea" && specType !== "homologation") {
+      throw new RouteError(400, "specType must be api_acea or homologation");
+    }
+    const row = {
+      spec_type: specType,
+      name: body.name ?? "",
+      specification: body.specification ?? "",
+      sort_order: body.sortOrder ?? 0,
+    };
+    const { data, error } = await supabase
+      .from("catalogue_spec_defaults")
+      .insert(row)
+      .select("*")
+      .single();
+    if (error) throw new RouteError(500, error.message);
+    return { data: transformCatalogueSpecDefault(data), status: 201 };
+  }
+
+  if (method === "PATCH" && (m = match(path, "/api/catalogue/spec-defaults/:id"))) {
+    const updates: any = {};
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.specification !== undefined) updates.specification = body.specification;
+    if (body.sortOrder !== undefined) updates.sort_order = body.sortOrder;
+    const { data, error } = await supabase
+      .from("catalogue_spec_defaults")
+      .update(updates)
+      .eq("id", Number(m.id))
+      .select("*")
+      .single();
+    if (error) throw new RouteError(500, error.message);
+    if (!data) throw new RouteError(404, "Not found");
+    return { data: transformCatalogueSpecDefault(data), status: 200 };
+  }
+
+  if (method === "DELETE" && (m = match(path, "/api/catalogue/spec-defaults/:id"))) {
+    const { error } = await supabase.from("catalogue_spec_defaults").delete().eq("id", Number(m.id));
     if (error) throw new RouteError(500, error.message);
     return { data: null, status: 204 };
   }

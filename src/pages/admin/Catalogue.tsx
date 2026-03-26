@@ -7,18 +7,25 @@ import {
   useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
   useListProductVolumes, useCreateProductVolume, useUpdateProductVolume, useDeleteProductVolume,
   useListViscosityGrades, useCreateViscosityGrade, useUpdateViscosityGrade, useDeleteViscosityGrade,
+  useListCatalogueSpecDefaults,
+  useCreateCatalogueSpecDefault,
+  useUpdateCatalogueSpecDefault,
+  useDeleteCatalogueSpecDefault,
 } from "@workspace/api-client-react";
+import type { CatalogueSpecType } from "@workspace/api-client-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SpecRichInput } from "@/components/admin/SpecRichInput";
+import { SpecRichTextSegments } from "@/components/admin/SpecRichTextSegments";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, Plus, X, Check, Tag, Droplets, FolderOpen, Package, Gauge } from "lucide-react";
+import { Pencil, Trash2, Plus, X, Check, Tag, Droplets, FolderOpen, Package, Gauge, ListChecks } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-type TabType = "brands" | "oilTypes" | "categories" | "volumes" | "viscosity";
+type TabType = "brands" | "oilTypes" | "categories" | "volumes" | "viscosity" | "specDefaults";
 
 export default function Catalogue() {
   const { t } = useTranslation();
@@ -31,6 +38,7 @@ export default function Catalogue() {
       { id: "categories" as TabType, label: t("admin.catalogue.tabCategories"), icon: FolderOpen },
       { id: "volumes" as TabType, label: t("admin.catalogue.tabVolumes"), icon: Package },
       { id: "viscosity" as TabType, label: t("admin.catalogue.tabViscosity"), icon: Gauge },
+      { id: "specDefaults" as TabType, label: t("admin.catalogue.tabSpecDefaults"), icon: ListChecks },
     ],
     [t]
   );
@@ -65,6 +73,7 @@ export default function Catalogue() {
       {activeTab === "categories" && <CategoriesTab />}
       {activeTab === "volumes" && <ProductVolumesTab />}
       {activeTab === "viscosity" && <ViscosityGradesTab />}
+      {activeTab === "specDefaults" && <SpecDefaultsTab />}
     </AdminLayout>
   );
 }
@@ -729,6 +738,240 @@ function CategoriesTab() {
                           variant="ghost"
                           className="hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => deleteMut.mutate({ id: cat.id })}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SPEC DEFAULTS (specifications + homologations)
+// ═══════════════════════════════════════════════════════════
+
+function SpecDefaultsTab() {
+  const { t } = useTranslation();
+  const [kind, setKind] = useState<CatalogueSpecType>("api_acea");
+  const [newName, setNewName] = useState("");
+  const [newSpec, setNewSpec] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSpec, setEditSpec] = useState("");
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: rows, isLoading } = useListCatalogueSpecDefaults(kind);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["/api/catalogue/spec-defaults"] });
+
+  const createMut = useCreateCatalogueSpecDefault({
+    mutation: {
+      onSuccess: () => {
+        invalidate();
+        setNewName("");
+        setNewSpec("");
+        toast({ title: t("admin.catalogue.toastSpecDefAdd") });
+      },
+      onError: () => toast({ title: t("admin.catalogue.toastSpecDefErr"), variant: "destructive" }),
+    },
+  });
+
+  const updateMut = useUpdateCatalogueSpecDefault({
+    mutation: {
+      onSuccess: () => {
+        invalidate();
+        setEditingId(null);
+        toast({ title: t("admin.catalogue.toastSpecDefUpd") });
+      },
+    },
+  });
+
+  const deleteMut = useDeleteCatalogueSpecDefault({
+    mutation: {
+      onSuccess: () => {
+        invalidate();
+        toast({ title: t("admin.catalogue.toastSpecDefDel") });
+      },
+    },
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim() && !newSpec.trim()) return;
+    createMut.mutate({
+      data: {
+        specType: kind,
+        name: newName.trim(),
+        specification: newSpec.trim(),
+        sortOrder: rows?.length ?? 0,
+      },
+    });
+  };
+
+  const saveEdit = (id: number) => {
+    if (!editName.trim() && !editSpec.trim()) return;
+    updateMut.mutate({
+      id,
+      data: { name: editName.trim(), specification: editSpec.trim() },
+    });
+  };
+
+  return (
+    <div className="max-w-4xl space-y-6">
+      <p className="text-muted-foreground">{t("admin.catalogue.specDefaultsIntro")}</p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setKind("api_acea");
+            setEditingId(null);
+          }}
+          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+            kind === "api_acea" ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground hover:bg-gray-50"
+          }`}
+        >
+          {t("admin.catalogue.specDefaultsKindSpecifications")}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setKind("homologation");
+            setEditingId(null);
+          }}
+          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+            kind === "homologation" ? "bg-primary text-white border-primary" : "bg-white text-muted-foreground hover:bg-gray-50"
+          }`}
+        >
+          {t("admin.catalogue.specDefaultsKindHomologation")}
+        </button>
+      </div>
+
+      <form onSubmit={handleCreate} className="bg-white p-6 rounded-xl border">
+        <label className="text-sm font-bold text-primary mb-4 block uppercase tracking-wider">
+          {t("admin.catalogue.specDefaultsAddSection")}
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">{t("admin.productForm.colSpecName")}</label>
+            <SpecRichInput
+              value={newName}
+              onChange={setNewName}
+              placeholder={t("admin.catalogue.specDefaultsNamePh")}
+              inputClassName="h-11"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">{t("admin.productForm.colSpecification")}</label>
+            <SpecRichInput
+              value={newSpec}
+              onChange={setNewSpec}
+              placeholder={t("admin.catalogue.specDefaultsSpecPh")}
+              inputClassName="h-11"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Button
+              type="submit"
+              className="h-11"
+              disabled={createMut.isPending || (!newName.trim() && !newSpec.trim())}
+            >
+              <Plus className="w-4 h-4 me-2" />
+              {t("admin.catalogue.add")}
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      <div className="bg-white rounded-xl border overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-muted-foreground">{t("admin.common.loading")}</div>
+        ) : !rows?.length ? (
+          <div className="p-8 text-center text-muted-foreground">{t("admin.catalogue.specDefaultsEmpty")}</div>
+        ) : (
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead>{t("admin.productForm.colSpecName")}</TableHead>
+                <TableHead>{t("admin.productForm.colSpecification")}</TableHead>
+                <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    {editingId === row.id ? (
+                      <SpecRichInput
+                        value={editName}
+                        onChange={setEditName}
+                        inputClassName="h-9"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(row.id);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                      />
+                    ) : (
+                      <span className="font-medium">
+                        {row.name ? <SpecRichTextSegments text={row.name} /> : "—"}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingId === row.id ? (
+                      <SpecRichInput
+                        value={editSpec}
+                        onChange={setEditSpec}
+                        inputClassName="h-9"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(row.id);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                      />
+                    ) : (
+                      <span>
+                        {row.specification ? <SpecRichTextSegments text={row.specification} /> : "—"}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {editingId === row.id ? (
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => saveEdit(row.id)} disabled={updateMut.isPending}>
+                          <Check className="w-4 h-4 text-green-600" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
+                          <X className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingId(row.id);
+                            setEditName(row.name);
+                            setEditSpec(row.specification);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => deleteMut.mutate({ id: row.id })}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
