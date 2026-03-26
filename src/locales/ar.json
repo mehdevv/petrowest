@@ -118,7 +118,11 @@
     "techSheetTitle": "عرض الخدمة",
     "techSheetSubtitle": "PETROWEST — عرض خدماتنا",
     "techSheetIframe": "عرض الخدمة PETROWEST",
-    "openPdf": "فتح عرض الخدمة بملء الشاشة"
+    "openPdf": "فتح PDF",
+    "viewPdf": "عرض PDF",
+    "pdfPopupHint": "يُفتح في نافذة صغيرة داخل هذه الصفحة.",
+    "downloadPdf": "تنزيل PDF",
+    "closePdf": "إغلاق"
   },
   "shop": {
     "title": "المتجر",
@@ -161,6 +165,10 @@
     "orderCta": "اطلب — {{price}} دج",
     "safetySheet": "بطاقة السلامة",
     "technicalSheet": "الورقة الفنية",
+    "downloadSafetySheet": "تنزيل بطاقة السلامة",
+    "downloadTechnicalSheet": "تنزيل الورقة الفنية",
+    "downloadPdfShort": "تنزيل PDF",
+    "closePdf": "إغلاق",
     "orderNow": "اطلب الآن",
     "codBadge": "الدفع عند الاستلام",
     "codHint": "ادفع فقط عند الاستلام.",

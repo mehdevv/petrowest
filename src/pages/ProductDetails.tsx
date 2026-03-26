@@ -14,7 +14,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useGetProduct, useGetDeliveryPrice, useCreateOrder } from "@workspace/api-client-react";
 import { ALGERIA_WILAYAS } from "@/lib/constants";
-import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart, Building2, Home, FileText } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Truck, Package, ChevronLeft, ChevronRight, ZoomIn, X, ShoppingCart, Building2, Home, FileText, Download } from "lucide-react";
 
 type DeliveryType = "stopdesk" | "domicile";
 
@@ -213,41 +213,56 @@ export default function ProductDetails() {
         )}
       </AnimatePresence>
 
-      {/* ── PDF Viewer Modal ── */}
+      {/* ── PDF viewer: compact in-page popup (iframe, not a new browser tab) ── */}
       <AnimatePresence>
         {pdfViewerUrl && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-3 sm:p-6"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/55 backdrop-blur-[2px]"
             onClick={() => setPdfViewerUrl(null)}
           >
-            <div
-              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden"
-              style={{ height: "min(90vh, 900px)" }}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.2 }}
+              className="relative flex w-full max-w-[min(96vw,42rem)] sm:max-w-[min(92vw,52rem)] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
+              style={{ height: "min(78vh, 640px)" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-gray-50">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  <h3 className="font-display text-lg sm:text-xl text-primary">{pdfViewerTitle}</h3>
+              <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-gray-50 px-3 py-2.5 sm:px-4 sm:py-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+                  <h3 className="font-display truncate text-sm font-semibold text-primary sm:text-base">{pdfViewerTitle}</h3>
                 </div>
-                <button
-                  className="text-gray-500 hover:text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-full p-1.5 transition"
-                  onClick={() => setPdfViewerUrl(null)}
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <a
+                    href={pdfViewerUrl}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-gray-200 hover:text-primary"
+                    aria-label={t("product.downloadPdfShort")}
+                    title={t("product.downloadPdfShort")}
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-gray-200 hover:text-gray-900"
+                    onClick={() => setPdfViewerUrl(null)}
+                    aria-label={t("product.closePdf")}
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 bg-gray-100">
-                <iframe
-                  src={pdfViewerUrl}
-                  className="w-full h-full border-0"
-                  title={pdfViewerTitle}
-                />
+              <div className="min-h-0 flex-1 bg-gray-100">
+                <iframe src={pdfViewerUrl} className="h-full w-full border-0" title={pdfViewerTitle} />
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -325,32 +340,58 @@ export default function ProductDetails() {
                 </div>
                 <p className="text-sm sm:text-lg leading-relaxed text-gray-700 mb-5 sm:mb-8">{product.description}</p>
                 {(product.securitySheetUrl || product.technicalSheetUrl) && (
-                  <div className="flex flex-wrap gap-3 mb-5 sm:mb-8">
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-5 sm:mb-8">
                     {product.securitySheetUrl && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPdfViewerUrl(product.securitySheetUrl!);
-                          setPdfViewerTitle(t("product.safetySheet"));
-                        }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border-2 border-red-200 rounded-xl text-red-700 font-semibold text-sm hover:bg-red-100 hover:border-red-300 transition-all hover:shadow-md"
-                      >
-                        <ShieldCheck className="w-5 h-5" />
-                        {t("product.safetySheet")}
-                      </button>
+                      <div className="flex w-full min-w-0 flex-1 rounded-xl border-2 border-red-200 overflow-hidden bg-red-50/50 shadow-sm sm:min-w-[280px] sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfViewerUrl(product.securitySheetUrl!);
+                            setPdfViewerTitle(t("product.safetySheet"));
+                          }}
+                          className="flex min-w-0 flex-1 items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-red-800 transition-colors hover:bg-red-100/80"
+                        >
+                          <ShieldCheck className="h-5 w-5 shrink-0" />
+                          <span className="truncate">{t("product.safetySheet")}</span>
+                        </button>
+                        <a
+                          href={product.securitySheetUrl}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex shrink-0 items-center justify-center border-s-2 border-red-200 bg-white px-3 text-red-700 transition-colors hover:bg-red-50"
+                          aria-label={t("product.downloadSafetySheet")}
+                          title={t("product.downloadSafetySheet")}
+                        >
+                          <Download className="h-5 w-5" />
+                        </a>
+                      </div>
                     )}
                     {product.technicalSheetUrl && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPdfViewerUrl(product.technicalSheetUrl!);
-                          setPdfViewerTitle(t("product.technicalSheet"));
-                        }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border-2 border-blue-200 rounded-xl text-blue-700 font-semibold text-sm hover:bg-blue-100 hover:border-blue-300 transition-all hover:shadow-md"
-                      >
-                        <FileText className="w-5 h-5" />
-                        {t("product.technicalSheet")}
-                      </button>
+                      <div className="flex w-full min-w-0 flex-1 rounded-xl border-2 border-blue-200 overflow-hidden bg-blue-50/50 shadow-sm sm:min-w-[280px] sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfViewerUrl(product.technicalSheetUrl!);
+                            setPdfViewerTitle(t("product.technicalSheet"));
+                          }}
+                          className="flex min-w-0 flex-1 items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-blue-800 transition-colors hover:bg-blue-100/80"
+                        >
+                          <FileText className="h-5 w-5 shrink-0" />
+                          <span className="truncate">{t("product.technicalSheet")}</span>
+                        </button>
+                        <a
+                          href={product.technicalSheetUrl}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex shrink-0 items-center justify-center border-s-2 border-blue-200 bg-white px-3 text-blue-700 transition-colors hover:bg-blue-50"
+                          aria-label={t("product.downloadTechnicalSheet")}
+                          title={t("product.downloadTechnicalSheet")}
+                        >
+                          <Download className="h-5 w-5" />
+                        </a>
+                      </div>
                     )}
                   </div>
                 )}

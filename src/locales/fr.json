@@ -118,7 +118,11 @@
     "techSheetTitle": "Offre de service",
     "techSheetSubtitle": "PETROWEST — Présentation de nos services",
     "techSheetIframe": "Offre de service PETROWEST",
-    "openPdf": "Ouvrir l'offre de service en plein écran"
+    "openPdf": "Ouvrir le PDF",
+    "viewPdf": "Voir le PDF",
+    "pdfPopupHint": "S’ouvre dans une petite fenêtre sur cette page.",
+    "downloadPdf": "Télécharger le PDF",
+    "closePdf": "Fermer"
   },
   "shop": {
     "title": "Notre Boutique",
@@ -161,6 +165,10 @@
     "orderCta": "Commander — {{price}} DA",
     "safetySheet": "Fiche de Sécurité",
     "technicalSheet": "Fiche Technique",
+    "downloadSafetySheet": "Télécharger la fiche de sécurité",
+    "downloadTechnicalSheet": "Télécharger la fiche technique",
+    "downloadPdfShort": "Télécharger le PDF",
+    "closePdf": "Fermer",
     "orderNow": "Commander Maintenant",
     "codBadge": "PAIEMENT À LA LIVRAISON",
     "codHint": "Payez uniquement à la réception.",
