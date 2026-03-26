@@ -405,7 +405,7 @@ export default function ProductDetails() {
                       >
                         {hasApi && (
                           <div className="space-y-0.5 sm:space-y-1 min-w-0 break-words">
-                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary leading-tight">
+                            <h4 className="font-display text-base sm:text-lg md:text-xl font-semibold text-primary leading-tight">
                               {t("product.specificationsColumn")}
                             </h4>
                             <div>{renderSpecLines(apiRows)}</div>
@@ -413,7 +413,7 @@ export default function ProductDetails() {
                         )}
                         {hasHomo && (
                           <div className="space-y-0.5 sm:space-y-1 min-w-0 break-words">
-                            <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary leading-tight">
+                            <h4 className="font-display text-base sm:text-lg md:text-xl font-semibold text-primary leading-tight">
                               {t("product.tableHomologation")}
                             </h4>
                             <div>{renderSpecLines(homoRows)}</div>
