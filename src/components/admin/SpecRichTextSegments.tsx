@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /** Renders plain text with `**segments**` shown as <strong>. */
 export function SpecRichTextSegments({
@@ -20,7 +21,7 @@ export function SpecRichTextSegments({
     nodes.push(
       <strong
         key={k++}
-        className="font-black text-gray-950 dark:text-gray-50 tracking-tight"
+        className="font-black text-gray-950 dark:text-gray-50 tracking-tight break-words [overflow-wrap:anywhere]"
       >
         {m[1]}
       </strong>
@@ -31,7 +32,9 @@ export function SpecRichTextSegments({
     nodes.push(<Fragment key={k++}>{text.slice(last)}</Fragment>);
   }
   if (nodes.length === 0) {
-    return <span className={className}>{text}</span>;
+    return (
+      <span className={cn("break-words [overflow-wrap:anywhere]", className)}>{text}</span>
+    );
   }
-  return <span className={className}>{nodes}</span>;
+  return <span className={cn("break-words [overflow-wrap:anywhere]", className)}>{nodes}</span>;
 }

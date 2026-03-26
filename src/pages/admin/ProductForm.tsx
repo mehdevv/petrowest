@@ -125,27 +125,39 @@ function ProductSpecRowsEditor(props: {
         <Table>
           <TableHeader>
             <TableRow className="bg-white">
-              <TableHead className="w-[36%]">{t("admin.productForm.colSpecName")}</TableHead>
-              <TableHead>{t("admin.productForm.colSpecification")}</TableHead>
+              <TableHead className="min-w-0">
+                <div className="flex flex-row flex-wrap gap-x-4 gap-y-1 pe-2">
+                  <span className="min-w-0 flex-1 basis-[min(100%,12rem)] font-medium">
+                    {t("admin.productForm.colSpecName")}
+                  </span>
+                  <span className="min-w-0 flex-1 basis-[min(100%,12rem)] font-medium">
+                    {t("admin.productForm.colSpecification")}
+                  </span>
+                </div>
+              </TableHead>
               <TableHead className="w-12 text-end">{t("admin.catalogue.actions")}</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="[&_tr:not(:first-child)_td]:border-t [&_tr:not(:first-child)_td]:border-border/25">
             {rows.map((row, index) => (
-              <TableRow key={index} className="bg-white">
-                <TableCell className="align-top">
-                  <SpecRichInput
-                    value={row.name}
-                    onChange={(v) => updateRow(index, "name", v)}
-                    placeholder={t("admin.productForm.colSpecName")}
-                  />
-                </TableCell>
-                <TableCell className="align-top">
-                  <SpecRichInput
-                    value={row.specification}
-                    onChange={(v) => updateRow(index, "specification", v)}
-                    placeholder={t("admin.productForm.colSpecification")}
-                  />
+              <TableRow key={index} className="border-b-0 bg-white">
+                <TableCell className="align-top min-w-0 max-w-[min(100vw-4rem,56rem)]">
+                  <div className="flex flex-row flex-wrap items-start gap-x-3 gap-y-2 min-w-0">
+                    <div className="min-w-0 flex-1 basis-[min(100%,14rem)]">
+                      <SpecRichInput
+                        value={row.name}
+                        onChange={(v) => updateRow(index, "name", v)}
+                        placeholder={t("admin.productForm.colSpecName")}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1 basis-[min(100%,14rem)]">
+                      <SpecRichInput
+                        value={row.specification}
+                        onChange={(v) => updateRow(index, "specification", v)}
+                        placeholder={t("admin.productForm.colSpecification")}
+                      />
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell className="text-end align-top">
                   <Button

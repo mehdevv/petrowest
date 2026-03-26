@@ -860,26 +860,26 @@ function SpecDefaultsTab() {
         <label className="text-sm font-bold text-primary mb-4 block uppercase tracking-wider">
           {t("admin.catalogue.specDefaultsAddSection")}
         </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-          <div>
+        <div className="flex flex-row flex-wrap items-end gap-x-4 gap-y-3">
+          <div className="min-w-0 flex-1 basis-[min(100%,18rem)]">
             <label className="text-xs text-muted-foreground mb-1 block">{t("admin.productForm.colSpecName")}</label>
             <SpecRichInput
               value={newName}
               onChange={setNewName}
               placeholder={t("admin.catalogue.specDefaultsNamePh")}
-              inputClassName="h-11"
+              inputClassName="min-h-11"
             />
           </div>
-          <div>
+          <div className="min-w-0 flex-1 basis-[min(100%,18rem)]">
             <label className="text-xs text-muted-foreground mb-1 block">{t("admin.productForm.colSpecification")}</label>
             <SpecRichInput
               value={newSpec}
               onChange={setNewSpec}
               placeholder={t("admin.catalogue.specDefaultsSpecPh")}
-              inputClassName="h-11"
+              inputClassName="min-h-11"
             />
           </div>
-          <div className="md:col-span-2">
+          <div className="w-full sm:w-auto sm:shrink-0">
             <Button
               type="submit"
               className="h-11"
@@ -901,50 +901,71 @@ function SpecDefaultsTab() {
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead>{t("admin.productForm.colSpecName")}</TableHead>
-                <TableHead>{t("admin.productForm.colSpecification")}</TableHead>
+                <TableHead className="min-w-0">
+                  <div className="flex flex-row flex-wrap gap-x-4 gap-y-1 pe-2">
+                    <span className="min-w-0 flex-1 basis-[min(100%,12rem)]">
+                      {t("admin.productForm.colSpecName")}
+                    </span>
+                    <span className="min-w-0 flex-1 basis-[min(100%,12rem)]">
+                      {t("admin.productForm.colSpecification")}
+                    </span>
+                  </div>
+                </TableHead>
                 <TableHead className="text-end w-28">{t("admin.catalogue.actions")}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="[&_tr:not(:first-child)_td]:border-t [&_tr:not(:first-child)_td]:border-border/25">
               {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
+                <TableRow key={row.id} className="border-b-0">
+                  <TableCell className="min-w-0 max-w-[min(100vw-4rem,56rem)] align-top">
                     {editingId === row.id ? (
-                      <SpecRichInput
-                        value={editName}
-                        onChange={setEditName}
-                        inputClassName="h-9"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") saveEdit(row.id);
-                          if (e.key === "Escape") setEditingId(null);
-                        }}
-                      />
+                      <div className="flex flex-row flex-wrap items-start gap-x-3 gap-y-2 min-w-0">
+                        <div className="min-w-0 flex-1 basis-[min(100%,14rem)]">
+                          <SpecRichInput
+                            value={editName}
+                            onChange={setEditName}
+                            inputClassName="min-h-9"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveEdit(row.id);
+                              if (e.key === "Escape") setEditingId(null);
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1 basis-[min(100%,14rem)]">
+                          <SpecRichInput
+                            value={editSpec}
+                            onChange={setEditSpec}
+                            inputClassName="min-h-9"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveEdit(row.id);
+                              if (e.key === "Escape") setEditingId(null);
+                            }}
+                          />
+                        </div>
+                      </div>
                     ) : (
-                      <span className="font-medium">
-                        {row.name ? <SpecRichTextSegments text={row.name} /> : "—"}
-                      </span>
+                      <p className="min-w-0 break-words text-sm leading-relaxed [overflow-wrap:anywhere]">
+                        {row.name ? (
+                          <span className="font-medium">
+                            <SpecRichTextSegments text={row.name} />
+                          </span>
+                        ) : null}
+                        {row.name && row.specification ? (
+                          <span className="ms-2 text-muted-foreground [overflow-wrap:anywhere]">
+                            <SpecRichTextSegments text={row.specification} />
+                          </span>
+                        ) : row.specification ? (
+                          <span className="font-medium text-primary">
+                            <SpecRichTextSegments text={row.specification} />
+                          </span>
+                        ) : !row.name ? (
+                          "—"
+                        ) : null}
+                      </p>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {editingId === row.id ? (
-                      <SpecRichInput
-                        value={editSpec}
-                        onChange={setEditSpec}
-                        inputClassName="h-9"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") saveEdit(row.id);
-                          if (e.key === "Escape") setEditingId(null);
-                        }}
-                      />
-                    ) : (
-                      <span>
-                        {row.specification ? <SpecRichTextSegments text={row.specification} /> : "—"}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right align-top">
                     {editingId === row.id ? (
                       <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" onClick={() => saveEdit(row.id)} disabled={updateMut.isPending}>

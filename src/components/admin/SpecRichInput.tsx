@@ -17,7 +17,8 @@ type SpecRichInputProps = {
 };
 
 const editableClass =
-  "relative z-[1] min-h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring md:text-sm " +
+  "relative z-[1] min-h-9 w-full min-w-0 max-w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-base shadow-sm outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring md:text-sm " +
+  "whitespace-normal break-words [overflow-wrap:anywhere] " +
   "[&_strong]:font-black [&_strong]:text-gray-950 [&_strong]:dark:text-gray-50 [&_b]:font-black [&_b]:text-gray-950 [&_b]:dark:text-gray-50";
 
 export function SpecRichInput({
@@ -89,17 +90,17 @@ export function SpecRichInput({
   const showPlaceholder = !value.trim() && !focused && !!placeholder;
 
   return (
-    <div className={cn("flex min-w-0 gap-1 items-center", className)}>
-      <div className="relative min-w-0 flex-1">
+    <div className={cn("flex min-w-0 gap-1 items-start", className)}>
+      <div className="relative min-w-0 flex-1 max-w-full">
         {showPlaceholder && (
-          <span className="pointer-events-none absolute left-3 top-1/2 z-0 -translate-y-1/2 text-sm text-muted-foreground">
+          <span className="pointer-events-none absolute left-3 top-2 z-0 text-sm text-muted-foreground">
             {placeholder}
           </span>
         )}
         <div
           ref={ref}
           role="textbox"
-          aria-multiline="false"
+          aria-multiline="true"
           aria-placeholder={placeholder}
           contentEditable
           suppressContentEditableWarning
@@ -135,7 +136,7 @@ export function SpecRichInput({
         type="button"
         variant="outline"
         size="icon"
-        className="h-9 w-9 shrink-0"
+        className="h-9 w-9 shrink-0 mt-0.5"
         onMouseDown={(e) => e.preventDefault()}
         onClick={applyBold}
         title={t("admin.specRichInput.boldTitle")}

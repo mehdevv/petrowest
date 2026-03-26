@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -353,31 +353,52 @@ export default function ProductDetails() {
 
                   const renderSpecLines = (
                     rows: { name?: string | null; specification?: string | null }[]
-                  ) =>
-                    rows
-                      .filter((r) => (r.name || r.specification || "").trim())
-                      .map((r, i) => {
-                        const name = r.name?.trim() ?? "";
-                        const spec = r.specification?.trim() ?? "";
-                        return (
-                          <div key={i} className="space-y-0.5 sm:space-y-1">
-                            {name ? (
-                              <p className="font-semibold text-primary leading-snug text-xs sm:text-sm">
-                                <SpecRichTextSegments text={name} />
+                  ) => {
+                    const filtered = rows.filter((r) => (r.name || r.specification || "").trim());
+                    return (
+                      <div className="flex min-w-0 flex-col">
+                        {filtered.map((r, i) => {
+                          const name = r.name?.trim() ?? "";
+                          const spec = r.specification?.trim() ?? "";
+                          return (
+                            <Fragment key={i}>
+                              {i > 0 ? (
+                                <span
+                                  aria-hidden
+                                  role="presentation"
+                                  className="my-2 sm:my-2.5 block h-px w-full shrink-0 bg-gradient-to-r from-transparent via-border/45 to-transparent"
+                                />
+                              ) : null}
+                              <p className="min-w-0 max-w-full break-words text-[11px] sm:text-sm md:text-base leading-relaxed [overflow-wrap:anywhere]">
+                                {name ? (
+                                  <span className="font-semibold text-primary">
+                                    <SpecRichTextSegments text={name} />
+                                  </span>
+                                ) : null}
+                                {name && spec ? (
+                                  <span className="ms-1.5 sm:ms-2 text-muted-foreground [overflow-wrap:anywhere]">
+                                    <SpecRichTextSegments text={spec} />
+                                  </span>
+                                ) : spec ? (
+                                  <span
+                                    className={
+                                      name
+                                        ? "text-muted-foreground"
+                                        : "text-primary font-medium"
+                                    }
+                                  >
+                                    <SpecRichTextSegments text={spec} />
+                                  </span>
+                                ) : !name ? (
+                                  "—"
+                                ) : null}
                               </p>
-                            ) : null}
-                            <p
-                              className={
-                                name
-                                  ? "text-muted-foreground text-[11px] sm:text-sm md:text-base leading-relaxed"
-                                  : "text-primary font-medium text-xs sm:text-sm md:text-base leading-relaxed"
-                              }
-                            >
-                              {spec ? <SpecRichTextSegments text={spec} /> : "—"}
-                            </p>
-                          </div>
-                        );
-                      });
+                            </Fragment>
+                          );
+                        })}
+                      </div>
+                    );
+                  };
 
                   return (
                     <div className="rounded-xl border bg-white p-3 sm:p-6 mb-5 sm:mb-8">
@@ -393,7 +414,7 @@ export default function ProductDetails() {
                             <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary border-b border-primary/15 pb-1.5 sm:pb-2 leading-tight">
                               {t("product.specificationsColumn")}
                             </h4>
-                            <div className="space-y-3 sm:space-y-4">{renderSpecLines(apiRows)}</div>
+                            <div>{renderSpecLines(apiRows)}</div>
                           </div>
                         )}
                         {hasHomo && (
@@ -401,7 +422,7 @@ export default function ProductDetails() {
                             <h4 className="font-display text-[11px] sm:text-base font-semibold text-primary border-b border-primary/15 pb-1.5 sm:pb-2 leading-tight">
                               {t("product.tableHomologation")}
                             </h4>
-                            <div className="space-y-3 sm:space-y-4">{renderSpecLines(homoRows)}</div>
+                            <div>{renderSpecLines(homoRows)}</div>
                           </div>
                         )}
                       </div>
