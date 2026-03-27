@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2, ChevronDown, Download, X } from "lucide-react";
+import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2, ChevronDown } from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ui-custom/ProductCard";
@@ -332,7 +332,6 @@ function B2BSection() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const servicePdfUrl = `${import.meta.env.BASE_URL}PETROWEST.pdf`;
-  const [servicePdfOpen, setServicePdfOpen] = useState(false);
   const [form, setForm] = useState({ company: "", phone: "", email: "", message: "" });
   const createMessage = useCreateB2BMessage({
     mutation: {
@@ -430,9 +429,9 @@ function B2BSection() {
             </form>
           </div>
 
-          {/* Right — Service offer PDF (opens in system / browser PDF viewer) */}
-          <div className="bg-white rounded-2xl shadow-xl border border-border p-6 lg:p-8 flex flex-col justify-between gap-6">
-            <div className="flex items-start gap-3">
+          {/* Right — Service offer PDF (embedded in page) */}
+          <div className="bg-white rounded-2xl shadow-xl border border-border p-6 lg:p-8 flex flex-col gap-4 min-h-0">
+            <div className="flex items-start gap-3 shrink-0">
               <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shrink-0">
                 <FileText className="w-6 h-6 text-secondary" />
               </div>
@@ -441,80 +440,19 @@ function B2BSection() {
                 <p className="text-sm text-muted-foreground">{t("home.techSheetSubtitle")}</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground -mt-2">{t("home.pdfPopupHint")}</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                type="button"
-                size="lg"
-                className="flex-1 font-display tracking-wide h-12 sm:h-14"
-                onClick={() => setServicePdfOpen(true)}
-              >
-                <FileText className="w-5 h-5 me-2" />
-                {t("home.viewPdf")}
-              </Button>
-              <Button asChild variant="outline" size="lg" className="sm:shrink-0 font-display tracking-wide h-12 sm:h-14 border-2">
-                <a href={servicePdfUrl} download target="_blank" rel="noopener noreferrer">
-                  <Download className="w-5 h-5 me-2" />
-                  {t("home.downloadPdf")}
-                </a>
-              </Button>
+            <div
+              className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-gray-100"
+              style={{ height: "min(70vh, 640px)" }}
+            >
+              <iframe
+                src={servicePdfUrl}
+                className="h-full w-full border-0"
+                title={t("home.techSheetIframe")}
+              />
             </div>
           </div>
         </div>
       </div>
-
-      <AnimatePresence>
-        {servicePdfOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/55 backdrop-blur-[2px]"
-            onClick={() => setServicePdfOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ duration: 0.2 }}
-              className="relative flex w-full max-w-[min(96vw,42rem)] sm:max-w-[min(92vw,52rem)] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-2xl"
-              style={{ height: "min(78vh, 640px)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex shrink-0 items-center justify-between gap-2 border-b bg-gray-50 px-3 py-2.5 sm:px-4 sm:py-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <FileText className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
-                  <h3 className="font-display truncate text-sm font-semibold text-primary sm:text-base">{t("home.techSheetTitle")}</h3>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <a
-                    href={servicePdfUrl}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-gray-200 hover:text-primary"
-                    aria-label={t("home.downloadPdf")}
-                    title={t("home.downloadPdf")}
-                  >
-                    <Download className="h-4 w-4" />
-                  </a>
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-gray-200 hover:text-gray-900"
-                    onClick={() => setServicePdfOpen(false)}
-                    aria-label={t("home.closePdf")}
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="min-h-0 flex-1 bg-gray-100">
-                <iframe src={servicePdfUrl} className="h-full w-full border-0" title={t("home.techSheetIframe")} />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }
