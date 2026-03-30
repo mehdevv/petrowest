@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Pencil, Trash2, Plus, X, Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -95,6 +96,8 @@ export default function Categories() {
               <TableRow>
                 <TableHead>{t("admin.categories.colName")}</TableHead>
                 <TableHead className="text-center">{t("admin.categories.colProducts")}</TableHead>
+                <TableHead className="text-center w-[120px]">{t("admin.categories.colHeroVehicle")}</TableHead>
+                <TableHead className="text-center w-28">{t("admin.categories.colHeroOrder")}</TableHead>
                 <TableHead className="text-end">{t("admin.categories.colActions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -119,6 +122,29 @@ export default function Categories() {
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="secondary">{cat.productCount}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Switch
+                      checked={!!cat.heroActive}
+                      onCheckedChange={(c) => updateMut.mutate({ id: cat.id, data: { heroActive: c } })}
+                      disabled={editingId === cat.id || updateMut.isPending}
+                      aria-label={t("admin.categories.colHeroVehicle")}
+                    />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Input
+                      type="number"
+                      className="h-9 w-20 mx-auto text-center"
+                      defaultValue={cat.heroSortOrder ?? 0}
+                      key={`${cat.id}-hord-${cat.heroSortOrder ?? 0}`}
+                      disabled={editingId === cat.id || updateMut.isPending}
+                      onBlur={(e) => {
+                        const v = Number(e.target.value);
+                        if (Number.isFinite(v) && v !== (cat.heroSortOrder ?? 0)) {
+                          updateMut.mutate({ id: cat.id, data: { heroSortOrder: v } });
+                        }
+                      }}
+                    />
                   </TableCell>
                   <TableCell className="text-end">
                     {editingId === cat.id ? (

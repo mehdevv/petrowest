@@ -33,6 +33,14 @@ import type {
   DeliveryPrice,
   ErrorResponse,
   GetVehicleRecommendationParams,
+  ListModelEngineYearsParams,
+  ModelEngineYearOption,
+  ListModelTextEntriesParams,
+  ModelTextEntry,
+  CreateModelTextEntryBody,
+  TextEntryConfigResponse,
+  PatchTextEntryCategoryBody,
+  VehicleRecommendationGroup,
   HealthStatus,
   ListOrdersParams,
   ListProductsParams,
@@ -3708,8 +3716,8 @@ export const getGetVehicleRecommendationUrl = (
 export const getVehicleRecommendation = async (
   params: GetVehicleRecommendationParams,
   options?: RequestInit,
-): Promise<Product[]> => {
-  return customFetch<Product[]>(getGetVehicleRecommendationUrl(params), {
+): Promise<VehicleRecommendationGroup[] | Product[]> => {
+  return customFetch<VehicleRecommendationGroup[] | Product[]>(getGetVehicleRecommendationUrl(params), {
     ...options,
     method: "GET",
   });
@@ -3782,6 +3790,223 @@ export function useGetVehicleRecommendation<
   };
 
   return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODEL ENGINE YEARS (hero combined selector)
+// ═══════════════════════════════════════════════════════
+
+export const getListModelEngineYearsUrl = (params?: ListModelEngineYearsParams) => {
+  const sp = new URLSearchParams();
+  if (params?.vehicleModelId) sp.set("vehicleModelId", String(params.vehicleModelId));
+  const qs = sp.toString();
+  return `/api/vehicle/model-engine-years${qs ? `?${qs}` : ""}`;
+};
+
+export const listModelEngineYears = async (
+  params?: ListModelEngineYearsParams,
+  options?: RequestInit,
+): Promise<ModelEngineYearOption[]> => {
+  return customFetch<ModelEngineYearOption[]>(getListModelEngineYearsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListModelEngineYearsQueryKey = (params?: ListModelEngineYearsParams) => {
+  return [`/api/vehicle/model-engine-years`, ...(params ? [params] : [])] as const;
+};
+
+export const getListModelEngineYearsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listModelEngineYears>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListModelEngineYearsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listModelEngineYears>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListModelEngineYearsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listModelEngineYears>>> = ({ signal }) =>
+    listModelEngineYears(params, { signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listModelEngineYears>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export function useListModelEngineYears<
+  TData = Awaited<ReturnType<typeof listModelEngineYears>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListModelEngineYearsParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listModelEngineYears>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListModelEngineYearsQueryOptions(params, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODEL TEXT ENTRIES (admin: free-text moteur + année)
+// ═══════════════════════════════════════════════════════
+
+export const getListModelTextEntriesUrl = (params?: ListModelTextEntriesParams) => {
+  const sp = new URLSearchParams();
+  if (params?.vehicleModelId) sp.set("vehicleModelId", String(params.vehicleModelId));
+  const qs = sp.toString();
+  return `/api/vehicle/model-text-entries${qs ? `?${qs}` : ""}`;
+};
+
+export const listModelTextEntries = async (
+  params?: ListModelTextEntriesParams,
+  options?: RequestInit,
+): Promise<ModelTextEntry[]> => {
+  return customFetch<ModelTextEntry[]>(getListModelTextEntriesUrl(params), { ...options, method: "GET" });
+};
+
+export const getListModelTextEntriesQueryKey = (params?: ListModelTextEntriesParams) =>
+  [`/api/vehicle/model-text-entries`, ...(params ? [params] : [])] as const;
+
+export function useListModelTextEntries<
+  TData = Awaited<ReturnType<typeof listModelTextEntries>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListModelTextEntriesParams,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listModelTextEntries>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryKey = options?.query?.queryKey ?? getListModelTextEntriesQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listModelTextEntries>>> = ({ signal }) =>
+    listModelTextEntries(params, { signal, ...options?.request });
+  return useQuery({ queryKey, queryFn, ...options?.query }) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+}
+
+export const createModelTextEntry = async (
+  body: CreateModelTextEntryBody,
+  options?: RequestInit,
+): Promise<ModelTextEntry> => {
+  return customFetch<ModelTextEntry>(`/api/vehicle/model-text-entries`, {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export function useCreateModelTextEntry<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createModelTextEntry>>,
+    TError,
+    { data: BodyType<CreateModelTextEntryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createModelTextEntry>>,
+    { data: BodyType<CreateModelTextEntryBody> }
+  > = (props) => createModelTextEntry(props.data, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const deleteModelTextEntry = async (id: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(`/api/vehicle/model-text-entries/${id}`, { ...options, method: "DELETE" });
+};
+
+export function useDeleteModelTextEntry<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteModelTextEntry>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteModelTextEntry>>, { id: number }> = (
+    props,
+  ) => deleteModelTextEntry(props.id, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
+}
+
+export const getTextEntryConfigUrl = (entryId: number) =>
+  `/api/vehicle/model-text-entries/${entryId}/config`;
+
+export const getTextEntryConfig = async (
+  entryId: number,
+  options?: RequestInit,
+): Promise<TextEntryConfigResponse> => {
+  return customFetch<TextEntryConfigResponse>(getTextEntryConfigUrl(entryId), { ...options, method: "GET" });
+};
+
+export const getTextEntryConfigQueryKey = (entryId: number) =>
+  [`/api/vehicle/model-text-entries/${entryId}/config`] as const;
+
+export function useGetTextEntryConfig<
+  TData = Awaited<ReturnType<typeof getTextEntryConfig>>,
+  TError = ErrorType<unknown>,
+>(
+  entryId: number,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getTextEntryConfig>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryKey = options?.query?.queryKey ?? getTextEntryConfigQueryKey(entryId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTextEntryConfig>>> = ({ signal }) =>
+    getTextEntryConfig(entryId, { signal, ...options?.request });
+  return useQuery({
+    queryKey,
+    queryFn,
+    enabled: !!entryId,
+    ...options?.query,
+  }) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+}
+
+export const patchTextEntryCategory = async (
+  entryId: number,
+  categoryId: number,
+  body: PatchTextEntryCategoryBody,
+  options?: RequestInit,
+): Promise<{ ok: boolean }> => {
+  return customFetch<{ ok: boolean }>(
+    `/api/vehicle/model-text-entries/${entryId}/categories/${categoryId}`,
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(body),
+    },
+  );
+};
+
+export function usePatchTextEntryCategory<TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof patchTextEntryCategory>>,
+    TError,
+    { entryId: number; categoryId: number; data: BodyType<PatchTextEntryCategoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof patchTextEntryCategory>>,
+    { entryId: number; categoryId: number; data: BodyType<PatchTextEntryCategoryBody> }
+  > = (props) => patchTextEntryCategory(props.entryId, props.categoryId, props.data, requestOptions);
+  return useMutation({ mutationFn, ...mutationOptions });
 }
 
 /**

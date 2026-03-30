@@ -222,6 +222,8 @@ export interface Category {
   name: string;
   /** @nullable */
   image?: string | null;
+  heroActive: boolean;
+  heroSortOrder: number;
   productCount: number;
 }
 
@@ -229,12 +231,16 @@ export interface CreateCategoryBody {
   name: string;
   /** @nullable */
   image?: string | null;
+  heroActive?: boolean;
+  heroSortOrder?: number;
 }
 
 export interface UpdateCategoryBody {
   name?: string;
   /** @nullable */
   image?: string | null;
+  heroActive?: boolean;
+  heroSortOrder?: number;
 }
 
 export interface OilType {
@@ -446,9 +452,64 @@ export type ListVehicleVersionsParams = {
 };
 
 export type GetVehicleRecommendationParams = {
+  vehicleModelEntryId?: number;
   vehicleYearId?: number;
   vehicleVersionId?: number;
 };
+
+export interface VehicleRecommendationGroup {
+  category: { id: number; name: string };
+  products: Product[];
+}
+
+export type ListModelEngineYearsParams = {
+  vehicleModelId?: number;
+};
+
+export interface ModelEngineYearOption {
+  id: number;
+  label: string;
+  engineLabel?: string;
+  yearLabel?: string;
+}
+
+export type ListModelTextEntriesParams = {
+  vehicleModelId?: number;
+};
+
+export interface ModelTextEntry {
+  id: number;
+  vehicleModelId: number;
+  engineLabel: string;
+  yearLabel: string;
+  label: string;
+}
+
+export interface CreateModelTextEntryBody {
+  vehicleModelId: number;
+  engineLabel: string;
+  yearLabel: string;
+}
+
+export interface TextEntryCategoryConfigRow {
+  categoryId: number;
+  name: string;
+  isActive: boolean;
+  productIds: number[];
+}
+
+export interface TextEntryConfigResponse {
+  entryId: number;
+  vehicleModelId: number;
+  engineLabel: string;
+  yearLabel: string;
+  categories: TextEntryCategoryConfigRow[];
+}
+
+export interface PatchTextEntryCategoryBody {
+  isActive?: boolean;
+  productIds?: number[];
+}
 
 // ── Vehicle Years ────────────────────────────────────
 

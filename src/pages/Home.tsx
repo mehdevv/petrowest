@@ -20,12 +20,24 @@ import {
   useListVehicleCategories, 
   useListVehicleBrands, 
   useListVehicleModels, 
-  useListVehicleVersions,
-  useListVehicleYears,
+  useListModelEngineYears,
   useGetVehicleRecommendation,
   useListProducts,
   useCreateB2BMessage,
 } from "@workspace/api-client-react";
+import type { Product, VehicleRecommendationGroup } from "@workspace/api-client-react";
+
+function isVehicleRecommendationGroup(x: unknown): x is VehicleRecommendationGroup {
+  if (!x || typeof x !== "object" || !("category" in x) || !("products" in x)) return false;
+  const g = x as VehicleRecommendationGroup;
+  return (
+    typeof g.category === "object" &&
+    g.category !== null &&
+    typeof g.category.id === "number" &&
+    typeof g.category.name === "string" &&
+    Array.isArray(g.products)
+  );
+}
 
 const CAR_LOGOS_BASE = "https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos";
 
@@ -40,8 +52,7 @@ function VehicleFilter() {
   const [categoryId, setCategoryId] = useState<string>("");
   const [brandId, setBrandId] = useState<string>("");
   const [modelId, setModelId] = useState<string>("");
-  const [versionId, setVersionId] = useState<string>("");
-  const [yearId, setYearId] = useState<string>("");
+  const [engineYearId, setEngineYearId] = useState<string>("");
   const [searched, setSearched] = useState(false);
 
   const { data: categories, isPending: categoriesPending } = useListVehicleCategories();
@@ -53,34 +64,40 @@ function VehicleFilter() {
     { vehicleBrandId: Number(brandId) }, 
     { query: { enabled: !!brandId } }
   );
-  const { data: versions, isLoading: versionsLoading } = useListVehicleVersions(
-    { vehicleModelId: Number(modelId) }, 
+  const { data: engineYearOptions, isLoading: engineYearsLoading } = useListModelEngineYears(
+    { vehicleModelId: Number(modelId) },
     { query: { enabled: !!modelId } }
   );
-  const { data: years, isLoading: yearsLoading } = useListVehicleYears(
-    { vehicleVersionId: Number(versionId) },
-    { query: { enabled: !!versionId } }
-  );
-  const { data: recommendedProducts, isLoading: recommendLoading } = useGetVehicleRecommendation(
-    { vehicleYearId: Number(yearId) }, 
-    { query: { enabled: searched && !!yearId, retry: false } }
+  const { data: recommendationData, isLoading: recommendLoading } = useGetVehicleRecommendation(
+    { vehicleModelEntryId: Number(engineYearId) },
+    { query: { enabled: searched && !!engineYearId, retry: false } },
   );
 
+  const recommendationGroups: VehicleRecommendationGroup[] | undefined =
+    Array.isArray(recommendationData) &&
+    recommendationData.length > 0 &&
+    isVehicleRecommendationGroup(recommendationData[0])
+      ? (recommendationData as VehicleRecommendationGroup[])
+      : undefined;
+  const legacyFlatProducts: Product[] | undefined =
+    Array.isArray(recommendationData) &&
+    recommendationData.length > 0 &&
+    !isVehicleRecommendationGroup(recommendationData[0])
+      ? (recommendationData as Product[])
+      : undefined;
+
   const resetFromCategory = () => {
-    setBrandId(""); setModelId(""); setVersionId(""); setYearId(""); setSearched(false);
+    setBrandId(""); setModelId(""); setEngineYearId(""); setSearched(false);
   };
   const resetFromBrand = () => {
-    setModelId(""); setVersionId(""); setYearId(""); setSearched(false);
+    setModelId(""); setEngineYearId(""); setSearched(false);
   };
   const resetFromModel = () => {
-    setVersionId(""); setYearId(""); setSearched(false);
-  };
-  const resetFromVersion = () => {
-    setYearId(""); setSearched(false);
+    setEngineYearId(""); setSearched(false);
   };
 
   const handleFindOil = () => {
-    if (yearId) {
+    if (engineYearId) {
       setSearched(true);
     }
   };
@@ -194,8 +211,8 @@ function VehicleFilter() {
             </div>
           </div>
 
-          {/* Row 2: Model + Engine + Year */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          {/* Row 2: Model + Type et année de moteur */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             {/* 3. Model */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
@@ -215,40 +232,23 @@ function VehicleFilter() {
               </Select>
             </div>
 
-            {/* 4. Engine / Version */}
+            {/* 4. Type et année de moteur */}
             <div>
               <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
-                {t("home.vehicleEngine")}
+                {t("home.engineYearLabel")}
               </label>
               <Select 
                 disabled={!modelId} 
-                value={versionId} 
-                onValueChange={(val) => { setVersionId(val); resetFromVersion(); }}
+                value={engineYearId} 
+                onValueChange={(val) => { setEngineYearId(val); setSearched(false); }}
               >
                 <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
-                  <SelectValue placeholder={versionsLoading ? t("product.loading") : t("home.enginePlaceholder")} />
+                  <SelectValue placeholder={engineYearsLoading ? t("product.loading") : t("home.engineYearPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {versions?.map(v => <SelectItem key={v.id} value={v.id.toString()}>{v.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 5. Year */}
-            <div>
-              <label className="text-secondary/80 text-[11px] font-bold tracking-[0.15em] uppercase mb-2 block">
-                {t("home.vehicleYear")}
-              </label>
-              <Select 
-                disabled={!versionId} 
-                value={yearId} 
-                onValueChange={(val) => { setYearId(val); setSearched(false); }}
-              >
-                <SelectTrigger className="bg-primary/80 border-white/20 text-white h-11 rounded-md text-sm font-medium [&>svg]:text-white/60">
-                  <SelectValue placeholder={yearsLoading ? t("product.loading") : t("home.yearPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {years?.map(y => <SelectItem key={y.id} value={y.id.toString()}>{y.year}</SelectItem>)}
+                  {engineYearOptions?.map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id.toString()}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -258,7 +258,7 @@ function VehicleFilter() {
         {/* FIND MY OIL Button */}
         <button
           onClick={handleFindOil}
-          disabled={!yearId}
+          disabled={!engineYearId}
           className="w-full bg-secondary hover:bg-yellow-400 disabled:bg-secondary/50 disabled:cursor-not-allowed text-primary font-display text-2xl md:text-3xl tracking-wider py-4 flex items-center justify-center gap-3 transition-colors duration-200"
         >
           {t("home.findOil")} <ArrowRight className="w-6 h-6" strokeWidth={3} />
@@ -267,7 +267,7 @@ function VehicleFilter() {
 
       {/* Result Area */}
       <AnimatePresence>
-        {searched && yearId && (
+        {searched && engineYearId && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -279,17 +279,58 @@ function VehicleFilter() {
               <div className="h-28 flex items-center justify-center bg-[#001D3D]/80 backdrop-blur-xl rounded-xl border-2 border-secondary/40">
                 <span className="text-secondary animate-pulse font-display text-xl tracking-wider">{t("home.analyzing")}</span>
               </div>
-            ) : recommendedProducts && recommendedProducts.length > 0 ? (
+            ) : recommendationGroups && recommendationGroups.length > 0 ? (
+              <div className="space-y-8">
+                {recommendationGroups.map((group) => (
+                  <div key={group.category.id} className="space-y-3">
+                    <div className="flex items-center gap-2 px-1 border-b border-secondary/40 pb-2">
+                      <Tag className="w-5 h-5 text-secondary shrink-0" />
+                      <h3 className="text-secondary font-display text-lg md:text-xl tracking-wide uppercase font-bold">
+                        {group.category.name}
+                      </h3>
+                    </div>
+                    <div className="space-y-4">
+                      {group.products.map((product) => (
+                        <div key={`${group.category.id}-${product.id}`} className="bg-white rounded-xl p-5 flex flex-col sm:flex-row items-center gap-6 shadow-xl border-2 border-secondary">
+                          <div className="w-28 h-28 bg-gray-100 rounded-lg p-2 flex-shrink-0">
+                            <img 
+                              src={product.images?.[0] || "https://images.unsplash.com/photo-1623815148007-850d995cb4d5?w=200&h=200&fit=crop"} 
+                              alt={product.name}
+                              className="w-full h-full object-contain mix-blend-multiply"
+                            />
+                          </div>
+                          <div className="flex-1 text-center sm:text-left">
+                            <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <span className="text-green-600 font-bold text-xs uppercase tracking-widest">{t("home.perfectMatch")}</span>
+                            </div>
+                            <h4 className="font-display text-3xl text-primary leading-none mb-2">{product.name}</h4>
+                            <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
+                              <span className="font-display text-3xl text-primary font-bold">
+                                {product.price?.toLocaleString()} <span className="text-lg text-muted-foreground">DA</span>
+                              </span>
+                              <Button asChild size="lg" variant="secondary" className="font-display text-xl tracking-wider w-full sm:w-auto h-12">
+                                <Link href={`/shop/${product.slug}`}>{t("nav.buy")}</Link>
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : legacyFlatProducts && legacyFlatProducts.length > 0 ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 px-1">
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                   <span className="text-white font-bold text-sm uppercase tracking-widest">
-                    {recommendedProducts.length > 1
-                      ? t("home.recommendedOilsMany", { count: recommendedProducts.length })
-                      : t("home.recommendedOilsOne", { count: recommendedProducts.length })}
+                    {legacyFlatProducts.length > 1
+                      ? t("home.recommendedOilsMany", { count: legacyFlatProducts.length })
+                      : t("home.recommendedOilsOne", { count: legacyFlatProducts.length })}
                   </span>
                 </div>
-                {recommendedProducts.map((product) => (
+                {legacyFlatProducts.map((product) => (
                   <div key={product.id} className="bg-white rounded-xl p-5 flex flex-col sm:flex-row items-center gap-6 shadow-xl border-2 border-secondary">
                     <div className="w-28 h-28 bg-gray-100 rounded-lg p-2 flex-shrink-0">
                       <img 

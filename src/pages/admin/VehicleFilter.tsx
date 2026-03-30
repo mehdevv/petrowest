@@ -6,18 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, X } from "lucide-react";
 import { 
   useListVehicleCategories, useCreateVehicleCategory, useDeleteVehicleCategory,
   useListVehicleBrands, useCreateVehicleBrand, useDeleteVehicleBrand,
   useListVehicleModels, useCreateVehicleModel, useDeleteVehicleModel,
-  useListVehicleVersions, useCreateVehicleVersion, useDeleteVehicleVersion,
-  useListVehicleYears, useCreateVehicleYear, useDeleteVehicleYear,
-  useGetVehicleYearProducts, useSetVehicleYearProducts,
-  useListProducts
+  useListProducts,
+  useListModelTextEntries,
+  useCreateModelTextEntry,
+  useDeleteModelTextEntry,
+  useGetTextEntryConfig,
+  usePatchTextEntryCategory,
+  getTextEntryConfigQueryKey,
+  getListModelTextEntriesQueryKey,
+  getListModelEngineYearsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { getCarBrands, searchCarBrands, type CarBrandEntry } from "@/lib/car-logos";
 import { useTranslation } from "react-i18next";
 
@@ -97,72 +102,115 @@ function BrandAutocomplete({
   );
 }
 
-function MultiProductSelect({ yearId }: { yearId: number }) {
+function TextEntryConfigurator({ entryId }: { entryId: number }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const { data: currentProducts } = useGetVehicleYearProducts(yearId, { query: { enabled: !!yearId } });
+  const { data: config, isLoading } = useGetTextEntryConfig(entryId);
   const { data: allProducts } = useListProducts({ limit: 500 });
-  const setProducts = useSetVehicleYearProducts({
+  const [pickProduct, setPickProduct] = useState<Record<number, string>>({});
+  const patch = usePatchTextEntryCategory({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: [`/api/vehicle/years/${yearId}/products`] });
-        toast({ title: t("admin.vehicle.toastProductsUpd") });
+      onSuccess: (_d, v) => {
+        queryClient.invalidateQueries({ queryKey: getTextEntryConfigQueryKey(v.entryId) });
+        queryClient.invalidateQueries({ queryKey: ["/api/vehicle/recommend"] });
       },
     },
   });
 
-  const selectedIds = (currentProducts || []).map((p) => p.productId);
-  const [addingId, setAddingId] = useState<string>("");
+  if (isLoading || !config) {
+    return <p className="text-sm text-muted-foreground py-2">{t("product.loading")}</p>;
+  }
 
-  const handleAdd = () => {
-    if (!addingId) return;
-    const newIds = [...selectedIds, Number(addingId)];
-    setProducts.mutate({ yearId, data: { productIds: newIds } });
-    setAddingId("");
+  const productsByCategory = (cid: number) =>
+    allProducts?.products.filter((p) => p.categoryId === cid) ?? [];
+
+  const commitProducts = (categoryId: number, productIds: number[]) => {
+    patch.mutate({ entryId, categoryId, data: { productIds } });
   };
-
-  const handleRemove = (pid: number) => {
-    const newIds = selectedIds.filter((id) => id !== pid);
-    setProducts.mutate({ yearId, data: { productIds: newIds } });
-  };
-
-  const availableProducts = allProducts?.products.filter((p) => !selectedIds.includes(p.id)) || [];
 
   return (
-    <div className="space-y-2">
-      {/* Current selections */}
-      <div className="flex flex-wrap gap-2">
-        {(currentProducts || []).map((cp) => (
-          <Badge key={cp.id} variant="secondary" className="flex items-center gap-1.5 py-1.5 px-3 text-sm">
-            {cp.productName} ({cp.productBrandName})
-            <button onClick={() => handleRemove(cp.productId)} className="ml-1 hover:text-destructive">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </Badge>
-        ))}
-        {selectedIds.length === 0 && (
-          <span className="text-sm text-muted-foreground italic">{t("admin.vehiclePage.noProductsAssigned")}</span>
-        )}
-      </div>
-      {/* Add product */}
-      <div className="flex gap-2 items-center">
-        <Select value={addingId} onValueChange={setAddingId}>
-          <SelectTrigger className="flex-1 h-9 text-sm border-primary/20">
-            <SelectValue placeholder={t("admin.vehiclePage.addProductPh")} />
-          </SelectTrigger>
-          <SelectContent>
-            {availableProducts.map((p) => (
-              <SelectItem key={p.id} value={p.id.toString()}>
-                {p.name} ({p.brandName})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button size="sm" variant="outline" onClick={handleAdd} disabled={!addingId || setProducts.isPending}>
-          <Plus className="w-4 h-4" />
-        </Button>
-      </div>
+    <div className="space-y-4 mt-2">
+      <p className="text-xs text-muted-foreground">{t("admin.vehiclePage.textEntryTypesHint")}</p>
+      {config.categories.map((cat) => (
+        <div key={cat.categoryId} className="rounded-lg border bg-gray-50/50 p-3 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-bold text-primary">{cat.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">{t("admin.vehiclePage.typeActive")}</span>
+              <Switch
+                checked={cat.isActive}
+                onCheckedChange={(v) =>
+                  patch.mutate({ entryId, categoryId: cat.categoryId, data: { isActive: v } })
+                }
+                disabled={patch.isPending}
+                aria-label={t("admin.vehiclePage.typeActive")}
+              />
+            </div>
+          </div>
+          {cat.isActive && (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {cat.productIds.length === 0 && (
+                  <span className="text-sm text-muted-foreground italic">{t("admin.vehiclePage.noProductsInType")}</span>
+                )}
+                {cat.productIds.map((pid) => {
+                  const p = allProducts?.products.find((x) => x.id === pid);
+                  return (
+                    <Badge key={pid} variant="secondary" className="gap-1 py-1.5 px-2 text-sm">
+                      {p ? `${p.name} (${p.brandName})` : `#${pid}`}
+                      <button
+                        type="button"
+                        className="hover:text-destructive"
+                        onClick={() =>
+                          commitProducts(
+                            cat.categoryId,
+                            cat.productIds.filter((x) => x !== pid),
+                          )
+                        }
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 items-center max-w-xl">
+                <Select
+                  value={pickProduct[cat.categoryId] ?? ""}
+                  onValueChange={(v) => setPickProduct((s) => ({ ...s, [cat.categoryId]: v }))}
+                >
+                  <SelectTrigger className="h-9 flex-1 bg-white">
+                    <SelectValue placeholder={t("admin.vehiclePage.addProductPh")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productsByCategory(cat.categoryId)
+                      .filter((p) => !cat.productIds.includes(p.id))
+                      .map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name} ({p.brandName})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!pickProduct[cat.categoryId] || patch.isPending}
+                  onClick={() => {
+                    const v = pickProduct[cat.categoryId];
+                    if (!v) return;
+                    commitProducts(cat.categoryId, [...cat.productIds, Number(v)]);
+                    setPickProduct((s) => ({ ...s, [cat.categoryId]: "" }));
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -201,46 +249,39 @@ export default function VehicleFilter() {
   const createModel = useCreateVehicleModel({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/vehicle/models"] }); setModelName(""); } } });
   const deleteModel = useDeleteVehicleModel({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/vehicle/models"] }) } });
 
-  // ── Versions ──
+  // ── Model (tabs 3 & 4) + free-text engine/year entries ──
   const [selectedModelId, setSelectedModelId] = useState<string>("");
-  const [versionName, setVersionName] = useState("");
-  const { data: versions } = useListVehicleVersions({ vehicleModelId: Number(selectedModelId) }, { query: { enabled: !!selectedModelId }});
-  const createVersion = useCreateVehicleVersion({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/vehicle/versions"] }); setVersionName(""); } } });
-  const deleteVersion = useDeleteVehicleVersion({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/vehicle/versions"] }) } });
+  const [draftEngine, setDraftEngine] = useState("");
+  const [draftYear, setDraftYear] = useState("");
 
-  // ── Years ──
-  const [selectedVersionId, setSelectedVersionId] = useState<string>("");
-  const [yearMode, setYearMode] = useState<"single" | "range">("single");
-  const [yearValue, setYearValue] = useState("");
-  const [yearFrom, setYearFrom] = useState("");
-  const [yearTo, setYearTo] = useState("");
-  const { data: years } = useListVehicleYears({ vehicleVersionId: Number(selectedVersionId) }, { query: { enabled: !!selectedVersionId }});
-  const createYear = useCreateVehicleYear({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/vehicle/years"] }); } } });
-  const deleteYear = useDeleteVehicleYear({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/vehicle/years"] }) } });
-  const [rangeAdding, setRangeAdding] = useState(false);
+  const modelIdNum = selectedModelId ? Number(selectedModelId) : 0;
+  const textListParams = { vehicleModelId: modelIdNum };
+  const { data: textEntries } = useListModelTextEntries(textListParams, {
+    query: { enabled: modelIdNum > 0 },
+  });
 
-  const handleAddSingleYear = () => {
-    if (!yearValue || !selectedVersionId) return;
-    createYear.mutate({ data: { year: Number(yearValue), vehicleVersionId: Number(selectedVersionId) } });
-    setYearValue("");
+  const invalidateModelTextQueries = () => {
+    queryClient.invalidateQueries({ queryKey: getListModelTextEntriesQueryKey(textListParams) });
+    queryClient.invalidateQueries({ queryKey: getListModelEngineYearsQueryKey(textListParams) });
   };
 
-  const handleAddRange = async () => {
-    const from = Number(yearFrom);
-    const to = Number(yearTo);
-    if (!from || !to || from > to || !selectedVersionId) return;
-    setRangeAdding(true);
-    const existingYears = new Set((years || []).map(y => y.year));
-    for (let y = from; y <= to; y++) {
-      if (!existingYears.has(y)) {
-        await createYear.mutateAsync({ data: { year: y, vehicleVersionId: Number(selectedVersionId) } });
-      }
-    }
-    setRangeAdding(false);
-    setYearFrom("");
-    setYearTo("");
-    queryClient.invalidateQueries({ queryKey: ["/api/vehicle/years"] });
-  };
+  const createTextEntry = useCreateModelTextEntry({
+    mutation: {
+      onSuccess: () => {
+        invalidateModelTextQueries();
+        setDraftEngine("");
+        setDraftYear("");
+      },
+    },
+  });
+
+  const deleteTextEntry = useDeleteModelTextEntry({
+    mutation: {
+      onSuccess: () => {
+        invalidateModelTextQueries();
+      },
+    },
+  });
 
   return (
     <AdminLayout>
@@ -251,12 +292,11 @@ export default function VehicleFilter() {
 
       <div className="bg-white rounded-xl border p-2 sm:p-6">
         <Tabs defaultValue="categories">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto bg-gray-100 p-1 rounded-lg mb-8 gap-1">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto bg-gray-100 p-1 rounded-lg mb-8 gap-1">
             <TabsTrigger value="categories" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab1")}</TabsTrigger>
             <TabsTrigger value="brands" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab2")}</TabsTrigger>
             <TabsTrigger value="models" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab3")}</TabsTrigger>
-            <TabsTrigger value="versions" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab4")}</TabsTrigger>
-            <TabsTrigger value="years" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab5")}</TabsTrigger>
+            <TabsTrigger value="engine-years" className="font-bold data-[state=active]:bg-white text-[11px] sm:text-sm leading-tight whitespace-normal py-2 px-2 min-h-12">{t("admin.vehiclePage.tab4")}</TabsTrigger>
           </TabsList>
 
           {/* TAB 1 — Categories */}
@@ -380,9 +420,10 @@ export default function VehicleFilter() {
             )}
           </TabsContent>
 
-          {/* TAB 4 — Versions (engines) */}
-          <TabsContent value="versions" className="space-y-6">
-            <div className="max-w-3xl bg-gray-50 p-4 rounded-lg border mb-6 grid grid-cols-3 gap-4">
+          {/* TAB 4 — Type et année de moteur (texte libre + types + produits) */}
+          <TabsContent value="engine-years" className="space-y-6">
+            <p className="text-sm text-muted-foreground max-w-3xl">{t("admin.vehiclePage.tab4Intro")}</p>
+            <div className="bg-gray-50 p-4 rounded-lg border mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step1Cat")}</label>
                 <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSelectedBrandId(""); setSelectedModelId(""); }}>
@@ -417,188 +458,75 @@ export default function VehicleFilter() {
 
             {selectedModelId && (
               <>
-                <div className="flex gap-4 mb-8">
-                  <Input className="max-w-sm" placeholder={t("admin.vehiclePage.versionPh")} value={versionName} onChange={e => setVersionName(e.target.value)} />
-                  <Button onClick={() => createVersion.mutate({ data: { name: versionName, vehicleModelId: Number(selectedModelId) }})} disabled={!versionName}>{t("admin.vehiclePage.addEngineBtn")}</Button>
-                </div>
-                
-                <Table className="border rounded-lg shadow-sm">
-                  <TableHeader className="bg-[#001D3D] hover:bg-[#001D3D]">
-                    <TableRow>
-                      <TableHead className="text-white">Version / Moteur</TableHead>
-                      <TableHead className="text-right text-white w-24"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {versions?.map(v => (
-                      <TableRow key={v.id}>
-                        <TableCell className="font-bold">{v.name}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => deleteVersion.mutate({ id: v.id })} className="text-destructive"><Trash2 className="w-4 h-4"/></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </>
-            )}
-          </TabsContent>
-
-          {/* TAB 5 — Years & Oil Mapping (multi-product) */}
-          <TabsContent value="years" className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg border mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step1Cat")}</label>
-                <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSelectedBrandId(""); setSelectedModelId(""); setSelectedVersionId(""); }}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
-                  <SelectContent>{categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step2Brand")}</label>
-                <Select value={selectedBrandId} onValueChange={(v) => { setSelectedBrandId(v); setSelectedModelId(""); setSelectedVersionId(""); }} disabled={!selectedCatId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
-                  <SelectContent>
-                    {brands?.map(b => (
-                      <SelectItem key={b.id} value={b.id.toString()}>
-                        <span className="flex items-center gap-2">
-                          <img src={brandLogoUrl(b.name, b.logoUrl)} alt="" className="w-4 h-4 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                          {b.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step3Model")}</label>
-                <Select value={selectedModelId} onValueChange={(v) => { setSelectedModelId(v); setSelectedVersionId(""); }} disabled={!selectedBrandId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
-                  <SelectContent>{models?.map(m => <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-bold block mb-2 text-primary">{t("admin.vehiclePage.step4Engine")}</label>
-                <Select value={selectedVersionId} onValueChange={setSelectedVersionId} disabled={!selectedModelId}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder={t("admin.vehiclePage.choosePh")} /></SelectTrigger>
-                  <SelectContent>{versions?.map(v => <SelectItem key={v.id} value={v.id.toString()}>{v.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {selectedVersionId && (
-              <>
-                <div className="mb-8 space-y-4">
-                  {/* Mode toggle */}
-                  <div className="flex gap-2">
+                <div className="rounded-lg border bg-white p-4 space-y-4 max-w-3xl">
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary">{t("admin.vehiclePage.textEntryStepTitle")}</p>
+                  <div className="flex flex-col sm:flex-row gap-4 items-end flex-wrap">
+                    <div className="flex-1 min-w-[180px]">
+                      <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.engineTextLabel")}</label>
+                      <Input
+                        placeholder={t("admin.vehiclePage.versionPh")}
+                        value={draftEngine}
+                        onChange={(e) => setDraftEngine(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-[120px]">
+                      <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.yearTextLabel")}</label>
+                      <Input
+                        placeholder={t("admin.vehiclePage.yearPh")}
+                        value={draftYear}
+                        onChange={(e) => setDraftYear(e.target.value)}
+                      />
+                    </div>
                     <Button
-                      variant={yearMode === "single" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setYearMode("single")}
+                      type="button"
+                      onClick={() =>
+                        createTextEntry.mutate({
+                          data: {
+                            vehicleModelId: modelIdNum,
+                            engineLabel: draftEngine.trim(),
+                            yearLabel: draftYear.trim(),
+                          },
+                        })
+                      }
+                      disabled={
+                        !draftEngine.trim() ||
+                        !draftYear.trim() ||
+                        createTextEntry.isPending
+                      }
                     >
-                      {t("admin.vehiclePage.singleYear")}
-                    </Button>
-                    <Button
-                      variant={yearMode === "range" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setYearMode("range")}
-                    >
-                      {t("admin.vehiclePage.yearRange")}
+                      {t("admin.vehiclePage.saveTextEntryBtn")}
                     </Button>
                   </div>
-
-                  {yearMode === "single" ? (
-                    <div className="flex gap-4 items-end">
-                      <div>
-                        <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.yearLabel")}</label>
-                        <Input
-                          type="number"
-                          className="w-40"
-                          placeholder={t("admin.vehiclePage.yearPh")}
-                          min={1990}
-                          max={2030}
-                          value={yearValue}
-                          onChange={e => setYearValue(e.target.value)}
-                        />
-                      </div>
-                      <Button onClick={handleAddSingleYear} disabled={!yearValue || createYear.isPending}>
-                        {t("admin.vehicle.add")}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-4 items-end">
-                      <div>
-                        <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.from")}</label>
-                        <Input
-                          type="number"
-                          className="w-32"
-                          placeholder="2015"
-                          min={1990}
-                          max={2030}
-                          value={yearFrom}
-                          onChange={e => setYearFrom(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-bold block mb-1 text-primary">{t("admin.vehiclePage.to")}</label>
-                        <Input
-                          type="number"
-                          className="w-32"
-                          placeholder="2024"
-                          min={1990}
-                          max={2030}
-                          value={yearTo}
-                          onChange={e => setYearTo(e.target.value)}
-                        />
-                      </div>
-                      <Button
-                        onClick={handleAddRange}
-                        disabled={!yearFrom || !yearTo || Number(yearFrom) > Number(yearTo) || rangeAdding}
-                      >
-                        {rangeAdding
-                          ? t("admin.vehiclePage.yearAdding")
-                          : t("admin.vehiclePage.addYearsCount", {
-                              count:
-                                yearFrom && yearTo && Number(yearTo) >= Number(yearFrom)
-                                  ? Number(yearTo) - Number(yearFrom) + 1
-                                  : 0,
-                            })}
-                      </Button>
-                    </div>
-                  )}
                 </div>
-                
-                <Table className="border rounded-lg shadow-sm">
-                  <TableHeader className="bg-[#001D3D] hover:bg-[#001D3D]">
-                    <TableRow>
-                      <TableHead className="text-white w-28">{t("admin.vehiclePage.colYear")}</TableHead>
-                      <TableHead className="text-white">{t("admin.vehiclePage.recommendedOils")}</TableHead>
-                      <TableHead className="text-right text-white w-20"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {years?.map(y => (
-                      <TableRow key={y.id}>
-                        <TableCell className="font-display text-2xl font-bold text-primary">{y.year}</TableCell>
-                        <TableCell>
-                          <MultiProductSelect yearId={y.id} />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => deleteYear.mutate({ id: y.id })} className="text-destructive">
-                            <Trash2 className="w-4 h-4"/>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!years || years.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                          {t("admin.vehiclePage.noYears")}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+
+                <div className="space-y-6">
+                  <h3 className="text-sm font-bold text-primary uppercase tracking-wide">
+                    {t("admin.vehiclePage.textEntryListTitle")}
+                  </h3>
+                  {!textEntries?.length && (
+                    <p className="text-sm text-muted-foreground">{t("admin.vehiclePage.noTextEntries")}</p>
+                  )}
+                  {textEntries?.map((e) => (
+                    <div key={e.id} className="rounded-xl border border-primary/15 shadow-sm overflow-hidden">
+                      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#001D3D] text-white px-4 py-3">
+                        <span className="font-display text-lg font-bold tracking-tight">{e.label}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-white hover:text-destructive hover:bg-white/10"
+                          onClick={() => deleteTextEntry.mutate({ id: e.id })}
+                          aria-label={t("admin.common.delete")}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="p-4 bg-gray-50/30">
+                        <TextEntryConfigurator entryId={e.id} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </>
             )}
           </TabsContent>
