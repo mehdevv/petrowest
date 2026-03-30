@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, X } from "lucide-react";
+import { ChevronRight, Plus, Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { 
   useListVehicleCategories, useCreateVehicleCategory, useDeleteVehicleCategory,
   useListVehicleBrands, useCreateVehicleBrand, useDeleteVehicleBrand,
@@ -253,6 +254,8 @@ export default function VehicleFilter() {
   const [selectedModelId, setSelectedModelId] = useState<string>("");
   const [draftEngine, setDraftEngine] = useState("");
   const [draftYear, setDraftYear] = useState("");
+  /** Collapsed by default: hide type rows until the row is expanded. */
+  const [expandedTextEntryIds, setExpandedTextEntryIds] = useState<Set<number>>(() => new Set());
 
   const modelIdNum = selectedModelId ? Number(selectedModelId) : 0;
   const textListParams = { vehicleModelId: modelIdNum };
@@ -506,26 +509,59 @@ export default function VehicleFilter() {
                   {!textEntries?.length && (
                     <p className="text-sm text-muted-foreground">{t("admin.vehiclePage.noTextEntries")}</p>
                   )}
-                  {textEntries?.map((e) => (
-                    <div key={e.id} className="rounded-xl border border-primary/15 shadow-sm overflow-hidden">
-                      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#001D3D] text-white px-4 py-3">
-                        <span className="font-display text-lg font-bold tracking-tight">{e.label}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-white hover:text-destructive hover:bg-white/10"
-                          onClick={() => deleteTextEntry.mutate({ id: e.id })}
-                          aria-label={t("admin.common.delete")}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                  {textEntries?.map((e) => {
+                    const isOpen = expandedTextEntryIds.has(e.id);
+                    return (
+                      <div key={e.id} className="rounded-xl border border-primary/15 shadow-sm overflow-hidden">
+                        <div className="flex flex-wrap items-center gap-2 bg-[#001D3D] text-white px-4 py-3">
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-center gap-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#001D3D] rounded-sm"
+                            onClick={() =>
+                              setExpandedTextEntryIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(e.id)) next.delete(e.id);
+                                else next.add(e.id);
+                                return next;
+                              })
+                            }
+                            aria-expanded={isOpen}
+                            aria-label={
+                              isOpen
+                                ? t("admin.vehiclePage.collapseTextEntry")
+                                : t("admin.vehiclePage.expandTextEntry")
+                            }
+                          >
+                            <span className="font-display min-w-0 flex-1 text-lg font-bold tracking-tight truncate">
+                              {e.label}
+                            </span>
+                            <ChevronRight
+                              className={cn(
+                                "h-5 w-5 shrink-0 text-white/90 transition-transform duration-200",
+                                isOpen && "rotate-90",
+                              )}
+                              aria-hidden
+                            />
+                          </button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 text-white hover:text-destructive hover:bg-white/10"
+                            onClick={() => deleteTextEntry.mutate({ id: e.id })}
+                            aria-label={t("admin.common.delete")}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        {isOpen && (
+                          <div className="border-t border-white/10 p-4 bg-gray-50/30">
+                            <TextEntryConfigurator entryId={e.id} />
+                          </div>
+                        )}
                       </div>
-                      <div className="p-4 bg-gray-50/30">
-                        <TextEntryConfigurator entryId={e.id} />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}

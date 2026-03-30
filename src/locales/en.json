@@ -68,6 +68,8 @@
     "recommendedOilsMany": "{{count}} recommended oils",
     "perfectMatch": "Perfect match",
     "noMatch": "No match found. Contact us for a recommendation.",
+    "expandResultCategory": "Show products in this category",
+    "collapseResultCategory": "Hide products in this category",
     "categories": {
       "car": "Car",
       "moto": "Motorcycle",
@@ -737,7 +739,9 @@
       "noTextEntries": "No combinations yet — add engine text and year above.",
       "textEntryTypesHint": "Enable a type to assign products. Rows on the home page appear only for types that have at least one product.",
       "typeActive": "Active",
-      "noProductsInType": "No products for this type yet."
+      "noProductsInType": "No products for this type yet.",
+      "expandTextEntry": "Expand to configure product types",
+      "collapseTextEntry": "Collapse and hide product types"
     }
   }
 }

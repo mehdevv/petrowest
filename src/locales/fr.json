@@ -68,6 +68,8 @@
     "recommendedOilsMany": "{{count}} huiles recommandées",
     "perfectMatch": "Correspondance Parfaite",
     "noMatch": "Aucune correspondance trouvée. Contactez-nous pour une recommandation.",
+    "expandResultCategory": "Afficher les produits de cette catégorie",
+    "collapseResultCategory": "Masquer les produits de cette catégorie",
     "categories": {
       "car": "Voiture",
       "moto": "Moto",
@@ -737,7 +739,9 @@
       "noTextEntries": "Aucune combinaison — saisissez moteur et année ci-dessus.",
       "textEntryTypesHint": "Activez un type pour y assigner des produits. Sur l’accueil, une ligne n’apparaît que si le type a au moins un produit.",
       "typeActive": "Actif",
-      "noProductsInType": "Aucun produit pour ce type."
+      "noProductsInType": "Aucun produit pour ce type.",
+      "expandTextEntry": "Déplier pour configurer les types de produits",
+      "collapseTextEntry": "Replier et masquer les types de produits"
     }
   }
 }

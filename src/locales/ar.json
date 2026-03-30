@@ -68,6 +68,8 @@
     "recommendedOilsMany": "{{count}} زيوت موصى بها",
     "perfectMatch": "تطابق مثالي",
     "noMatch": "لا يوجد تطابق. اتصل بنا للحصول على توصية.",
+    "expandResultCategory": "عرض منتجات هذه الفئة",
+    "collapseResultCategory": "إخفاء منتجات هذه الفئة",
     "categories": {
       "car": "سيارة",
       "moto": "دراجة",
@@ -737,7 +739,9 @@
       "noTextEntries": "لا توجد تركيبات — أدخل المحرك والسنة أعلاه.",
       "textEntryTypesHint": "فعّل نوعاً لربط منتجات به. في الصفحة الرئيسية يظهر الصف فقط إذا كان للنوع منتج واحد على الأقل.",
       "typeActive": "مفعّل",
-      "noProductsInType": "لا منتجات لهذا النوع بعد."
+      "noProductsInType": "لا منتجات لهذا النوع بعد.",
+      "expandTextEntry": "توسيع لضبط أنواع المنتجات",
+      "collapseTextEntry": "طي وإخفاء أنواع المنتجات"
     }
   }
 }

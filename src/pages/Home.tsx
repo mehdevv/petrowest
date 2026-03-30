@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2, ChevronDown } from "lucide-react";
+import { Truck, ShieldCheck, Star, Tag, CheckCircle2, ArrowRight, Building2, Send, FileText, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ui-custom/ProductCard";
@@ -26,6 +26,7 @@ import {
   useCreateB2BMessage,
 } from "@workspace/api-client-react";
 import type { Product, VehicleRecommendationGroup } from "@workspace/api-client-react";
+import { cn } from "@/lib/utils";
 
 function isVehicleRecommendationGroup(x: unknown): x is VehicleRecommendationGroup {
   if (!x || typeof x !== "object" || !("category" in x) || !("products" in x)) return false;
@@ -54,6 +55,8 @@ function VehicleFilter() {
   const [modelId, setModelId] = useState<string>("");
   const [engineYearId, setEngineYearId] = useState<string>("");
   const [searched, setSearched] = useState(false);
+  /** Hero result rows: collapsed by default; open only the category blocks you want. */
+  const [openHeroCategoryIds, setOpenHeroCategoryIds] = useState<Set<number>>(() => new Set());
 
   const { data: categories, isPending: categoriesPending } = useListVehicleCategories();
   const { data: brands, isLoading: brandsLoading } = useListVehicleBrands(
@@ -72,6 +75,10 @@ function VehicleFilter() {
     { vehicleModelEntryId: Number(engineYearId) },
     { query: { enabled: searched && !!engineYearId, retry: false } },
   );
+
+  useEffect(() => {
+    setOpenHeroCategoryIds(new Set());
+  }, [engineYearId, searched]);
 
   const recommendationGroups: VehicleRecommendationGroup[] | undefined =
     Array.isArray(recommendationData) &&
@@ -280,45 +287,89 @@ function VehicleFilter() {
                 <span className="text-secondary animate-pulse font-display text-xl tracking-wider">{t("home.analyzing")}</span>
               </div>
             ) : recommendationGroups && recommendationGroups.length > 0 ? (
-              <div className="space-y-8">
-                {recommendationGroups.map((group) => (
-                  <div key={group.category.id} className="space-y-3">
-                    <div className="flex items-center gap-2 px-1 border-b border-secondary/40 pb-2">
-                      <Tag className="w-5 h-5 text-secondary shrink-0" />
-                      <h3 className="text-secondary font-display text-lg md:text-xl tracking-wide uppercase font-bold">
-                        {group.category.name}
-                      </h3>
-                    </div>
-                    <div className="space-y-4">
-                      {group.products.map((product) => (
-                        <div key={`${group.category.id}-${product.id}`} className="bg-white rounded-xl p-5 flex flex-col sm:flex-row items-center gap-6 shadow-xl border-2 border-secondary">
-                          <div className="w-28 h-28 bg-gray-100 rounded-lg p-2 flex-shrink-0">
-                            <img 
-                              src={product.images?.[0] || "https://images.unsplash.com/photo-1623815148007-850d995cb4d5?w=200&h=200&fit=crop"} 
-                              alt={product.name}
-                              className="w-full h-full object-contain mix-blend-multiply"
-                            />
-                          </div>
-                          <div className="flex-1 text-center sm:text-left">
-                            <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
-                              <CheckCircle2 className="w-5 h-5 text-green-600" />
-                              <span className="text-green-600 font-bold text-xs uppercase tracking-widest">{t("home.perfectMatch")}</span>
+              <div className="space-y-4">
+                {recommendationGroups.map((group) => {
+                  const isOpen = openHeroCategoryIds.has(group.category.id);
+                  return (
+                    <div
+                      key={group.category.id}
+                      className="overflow-hidden rounded-xl border-2 border-secondary/50 bg-[#001D3D]/85 backdrop-blur-xl shadow-lg"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenHeroCategoryIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(group.category.id)) next.delete(group.category.id);
+                            else next.add(group.category.id);
+                            return next;
+                          })
+                        }
+                        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-[#001D3D]"
+                        aria-expanded={isOpen}
+                        aria-label={
+                          isOpen ? t("home.collapseResultCategory") : t("home.expandResultCategory")
+                        }
+                      >
+                        <Tag className="h-5 w-5 shrink-0 text-secondary" aria-hidden />
+                        <h3 className="min-w-0 flex-1 text-secondary font-display text-lg md:text-xl font-bold uppercase tracking-wide">
+                          {group.category.name}
+                        </h3>
+                        <ChevronRight
+                          className={cn(
+                            "h-5 w-5 shrink-0 text-secondary transition-transform duration-200 ms-auto",
+                            isOpen && "rotate-90",
+                          )}
+                          aria-hidden
+                        />
+                      </button>
+                      {isOpen && (
+                        <div className="space-y-4 border-t border-secondary/30 px-3 pb-4 pt-4 sm:px-4">
+                          {group.products.map((product) => (
+                            <div
+                              key={`${group.category.id}-${product.id}`}
+                              className="flex flex-col items-center gap-6 rounded-xl border-2 border-secondary bg-white p-5 shadow-xl sm:flex-row"
+                            >
+                              <div className="h-28 w-28 flex-shrink-0 rounded-lg bg-gray-100 p-2">
+                                <img
+                                  src={
+                                    product.images?.[0] ||
+                                    "https://images.unsplash.com/photo-1623815148007-850d995cb4d5?w=200&h=200&fit=crop"
+                                  }
+                                  alt={product.name}
+                                  className="h-full w-full object-contain mix-blend-multiply"
+                                />
+                              </div>
+                              <div className="flex-1 text-center sm:text-left">
+                                <div className="mb-1 flex items-center justify-center gap-2 sm:justify-start">
+                                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                  <span className="text-xs font-bold uppercase tracking-widest text-green-600">
+                                    {t("home.perfectMatch")}
+                                  </span>
+                                </div>
+                                <h4 className="mb-2 font-display text-3xl leading-none text-primary">{product.name}</h4>
+                                <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+                                  <span className="font-display text-3xl font-bold text-primary">
+                                    {product.price?.toLocaleString()}{" "}
+                                    <span className="text-lg text-muted-foreground">DA</span>
+                                  </span>
+                                  <Button
+                                    asChild
+                                    size="lg"
+                                    variant="secondary"
+                                    className="h-12 w-full font-display text-xl tracking-wider sm:w-auto"
+                                  >
+                                    <Link href={`/shop/${product.slug}`}>{t("nav.buy")}</Link>
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
-                            <h4 className="font-display text-3xl text-primary leading-none mb-2">{product.name}</h4>
-                            <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
-                              <span className="font-display text-3xl text-primary font-bold">
-                                {product.price?.toLocaleString()} <span className="text-lg text-muted-foreground">DA</span>
-                              </span>
-                              <Button asChild size="lg" variant="secondary" className="font-display text-xl tracking-wider w-full sm:w-auto h-12">
-                                <Link href={`/shop/${product.slug}`}>{t("nav.buy")}</Link>
-                              </Button>
-                            </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : legacyFlatProducts && legacyFlatProducts.length > 0 ? (
               <div className="space-y-4">
